@@ -1,0 +1,2 @@
+# controleestatistico
+SISTEMA DE CONTROLE ESTATISTICO DE PRINTERS
