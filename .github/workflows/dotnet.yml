@@ -1,0 +1,18 @@
+name: Verificar QMS CEP
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore Qms.slnx
+      - run: dotnet build Qms.slnx --no-restore --configuration Release
+      - run: dotnet test Qms.slnx --no-build --configuration Release --logger "trx;LogFileName=ci.trx" --results-directory TestResults

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Qms.Application/Qms.Application.csproj" />
+    <Project Path="src/Qms.Domain/Qms.Domain.csproj" />
+    <Project Path="src/Qms.Infrastructure/Qms.Infrastructure.csproj" />
+    <Project Path="src/Qms.Statistics/Qms.Statistics.csproj" />
+    <Project Path="src/Qms.Web/Qms.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Qms.Tests/Qms.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,8 @@
+<section class="card kpi @ToneClass">
+<div class="label">@Label</div>
+<div class="value">@Value</div>
+<div class="trend">@Hint</div>@if(Percent is not null){<div class="bar">
+<i style="width:@(Math.Clamp(Percent.Value,0,100))%">
+</i>
+</div>}</section>
+@code { [Parameter,EditorRequired] public string Label {get;set;}=""; [Parameter,EditorRequired] public string Value {get;set;}=""; [Parameter] public string? Hint {get;set;} [Parameter] public double? Percent {get;set;} [Parameter] public string Tone {get;set;}="brand"; private string ToneClass=>"tone-"+Tone; }

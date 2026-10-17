@@ -1,0 +1,113 @@
+@page "/Account/Login"
+@layout LoginLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using Qms.Application.Auditing
+@using Qms.Infrastructure.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject IAuditService AuditService
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Entrar · QMS CEP</PageTitle>
+<div class="login-screen">
+<svg class="mesh" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<g stroke="#3b82f6" stroke-opacity=".18" fill="none">
+<path d="M60 720L260 610 470 660 640 540 860 600 1040 470 1260 520 1480 400M260 610L330 430 520 380 640 540M520 380L760 300 860 600M760 300L980 240 1040 470M980 240L1220 180 1260 520M330 430L140 330 60 720" />
+</g>
+</svg>
+<section class="login-card">
+<div class="login-mark">
+<span class="brand-mark">Q5</span>
+</div>
+<h1>QMS · CEP</h1>
+<p class="login-subtitle">Controle estatístico de processo · Indústria 5.0</p>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-bad" role="alert">@errorMessage</div>
+        }
+        <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+<DataAnnotationsValidator />
+<ValidationSummary class="validation-summary" role="alert" />
+<div class="field">
+<label for="username">Usuário</label>
+<InputText @bind-Value="Input.Email" id="username" class="form-control" autocomplete="username" aria-required="true" />
+</div>
+<div class="field">
+<label for="password">Senha</label>
+<InputText type="password" @bind-Value="Input.Password" id="password" class="form-control" autocomplete="current-password" aria-required="true" />
+</div>
+<button type="submit" class="btn login-submit">Entrar</button>
+</EditForm>
+<footer class="login-footer">
+<img src="img/brand-logo.png" alt="QMS" />
+</footer>
+</section>
+</div>
+
+@code {
+    private string? errorMessage;
+    private EditContext editContext = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        editContext = new EditContext(Input);
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    private async Task LoginUser()
+    {
+        if (!editContext.Validate())
+        {
+            return;
+        }
+
+        var account = await UserManager.FindByNameAsync(Input.Email);
+        var result = account is null || !account.IsActive
+            ? SignInResult.Failed
+            : await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, false, lockoutOnFailure: true);
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        if (result.Succeeded)
+        {
+            await AuditService.RecordAsync(account!.Id, "auth", Input.Email, "login.success", ip: ip, origin: "web");
+            Logger.LogInformation("Usuário autenticado.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            await AuditService.RecordAsync(account?.Id, "auth", Input.Email, "login.locked", ip: ip, origin: "web");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            await AuditService.RecordAsync(account?.Id, "auth", Input.Email, "login.failure", ip: ip, origin: "web");
+            errorMessage = "Não foi possível entrar. Verifique seu usuário e sua senha.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Informe o usuário.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Informe a senha.")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+}

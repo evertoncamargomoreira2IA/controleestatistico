@@ -1,2 +1,0 @@
-<span class="status @CssClass">@Text</span>
-@code { public enum ChipStatus { Ok, Warn, Bad, Neutral } [Parameter] public ChipStatus Status {get;set;}=ChipStatus.Neutral; [Parameter,EditorRequired] public string Text {get;set;}=""; private string CssClass => Status switch { ChipStatus.Ok=>"s-ok", ChipStatus.Warn=>"s-warn", ChipStatus.Bad=>"s-bad", _=>"s-neutral"}; }

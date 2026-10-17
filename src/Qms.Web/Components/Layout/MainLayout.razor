@@ -1,0 +1,80 @@
+@inherits LayoutComponentBase
+@using System.Security.Claims
+
+<div class="app-shell">
+<svg class="mesh" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<g stroke="#3b82f6" stroke-opacity=".18" fill="none">
+<path d="M60 720L260 610 470 660 640 540 860 600 1040 470 1260 520 1480 400M260 610L330 430 520 380 640 540M520 380L760 300 860 600M760 300L980 240 1040 470M980 240L1220 180 1260 520M1220 180L1460 120 1480 400M330 430L140 330 60 720M140 330L380 200 520 380M380 200L620 120 760 300M620 120L900 80 980 240" />
+</g>
+<g fill="#7dd3fc">
+<circle cx="260" cy="610" r="3" />
+<circle cx="640" cy="540" r="4" />
+<circle cx="1040" cy="470" r="3" />
+<circle cx="520" cy="380" r="3" />
+<circle cx="760" cy="300" r="3" />
+<circle cx="1220" cy="180" r="3" />
+<circle cx="1480" cy="400" r="4" />
+</g>
+</svg>
+<aside class="sidebar">
+<div class="brand">
+<span class="brand-mark">Q5</span>
+<div>
+<b>QMS · CEP</b>
+<small>Indústria 5.0</small>
+</div>
+</div>
+<NavMenu />
+<AuthorizeView>
+<Authorized Context="auth">
+<div class="operator">
+<span class="avatar">@Initials(auth.User)</span>
+<div class="operator-info">
+<b>@FullName(auth.User)</b>
+<small>@RoleName(auth.User)</small>
+<div class="operator-links">
+<a href="Account/Manage/ChangePassword">Trocar senha</a>
+<form action="Account/Logout" method="post">
+<AntiforgeryToken />
+<input type="hidden" name="ReturnUrl" value="/Account/Login" />
+<button type="submit" class="logout-link">Sair</button>
+</form>
+</div>
+</div>
+</div>
+</Authorized>
+</AuthorizeView>
+<div class="sidebar-footer">
+<img src="img/brand-logo.png" alt="" />
+<span>QMS · CEP</span>
+</div>
+</aside>
+<main class="main-content">@Body</main>
+</div>
+<div id="blazor-error-ui" data-nosnippet>Ocorreu um erro. <a href="." class="reload">Recarregar</a>
+<button class="dismiss">Fechar</button>
+</div>
+
+@code {
+    private static string FullName(ClaimsPrincipal user) =>
+        user.FindFirst("full_name")?.Value ?? user.Identity?.Name ?? "Operador";
+
+    private static string Initials(ClaimsPrincipal user)
+    {
+        var name = FullName(user);
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : name[..Math.Min(2, name.Length)].ToUpperInvariant();
+    }
+
+    private static string RoleName(ClaimsPrincipal user) => user.FindFirst(ClaimTypes.Role)?.Value switch
+    {
+        "admin" => "Administrador",
+        "engenheiro" => "Engenheiro",
+        "tecnico" => "Técnico",
+        "qualidade" => "Qualidade",
+        "leitor" => "Leitor",
+        _ => "Operador"
+    };
+}

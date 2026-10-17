@@ -1,0 +1,8 @@
+<section class="card @Class">
+<div class="card-head">
+<div>@if(!string.IsNullOrWhiteSpace(Title)){<h2>@Title</h2>}@if(!string.IsNullOrWhiteSpace(Subtitle)){<div class="sub">@Subtitle</div>}</div>
+<span class="spacer">
+</span>@HeaderActions</div>
+<div class="card-content">@ChildContent</div>
+</section>
+@code { [Parameter] public string? Title {get;set;} [Parameter] public string? Subtitle {get;set;} [Parameter] public RenderFragment? HeaderActions {get;set;} [Parameter] public RenderFragment? ChildContent {get;set;} [Parameter] public string? Class {get;set;} }

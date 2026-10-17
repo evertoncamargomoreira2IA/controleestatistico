@@ -1,0 +1,23 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Qms.Infrastructure.Identity
+@using Qms.Infrastructure.Persistence
+@using Qms.Application.Collection
+<PageTitle>Painel · QMS CEP</PageTitle>
+<PageHeader Title="Painel do processo" Breadcrumb="QMS · CEP / Operação" />
+<section class="card"><h2>Coleta CEP 25 × 3</h2><p>Registre as leituras pelo frontend ou selecione amostras da base. Acompanhe o preenchimento e consulte o histórico de cada conjunto.</p><div class="collection-toolbar"><a class="btn" href="/cep-coleta">Novo conjunto CEP</a><a class="btn ghost" href="/cep-dia">Progresso diário e histórico</a></div></section>
+<section class="grid kpis">
+<KpiCard Label="Usuários ativos" Value="@activeUsers.ToString("N0", ptBr)" Hint="Contas habilitadas no sistema" />
+<KpiCard Label="Subgrupos coletados hoje"
+ Value="@subgroupsToday.ToString("N0", ptBr)"
+ Hint="Subgrupos não excluídos no dia local" Tone="cyan" />
+<KpiCard Label="Cartas CEP" Value="—" Hint="Disponível na F3" Tone="neutral" />
+<KpiCard Label="Capabilidade" Value="—" Hint="Disponível na F4" Tone="neutral" />
+</section>
+<Card Title="Assistente do turno" Subtitle="O que pede atenção agora" Class="assist-card">
+<ChildContent>
+<EmptyState Text="Nenhum sinal aberto. Os alertas aparecerão aqui quando as cartas CEP estiverem ativas." />
+</ChildContent>
+</Card>

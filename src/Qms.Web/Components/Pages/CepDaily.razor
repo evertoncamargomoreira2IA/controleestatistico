@@ -1,0 +1,44 @@
+@page "/cep-dia"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "perm:view")]
+@using Qms.Application.Collection
+@using Qms.Domain.Collection
+@inject ICepDatasetService Service
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
+
+<PageTitle>Progresso diário CEP · QMS</PageTitle>
+<PageHeader Title="Progresso diário CEP" Breadcrumb="Operação / Histórico de conjuntos" />
+<div class="collection-toolbar cep-daily-toolbar"><a class="btn" href="/cep-coleta">Novo conjunto CEP</a><label class="field">Data de criação<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="LoadAsync">Consultar data</button><label class="field">Filtrar processo, título ou característica<input class="form-control" @bind="filter" @bind:event="oninput" /></label></div>
+@if (error is not null) { <div class="alert alert-bad" role="alert">@error</div> }
+<p>Conjuntos criados na data local de São Paulo, com seu estado atual. Abra o conjunto para consultar cada salvamento no histórico. A programação e as metas do turno serão disponibilizadas na Sprint 3.</p>
+<section class="grid kpis">
+<KpiCard Label="Conjuntos na data" Value="@Visible.Count.ToString()" Hint="Aplicado o filtro de processo" />
+<KpiCard Label="Em preenchimento" Value="@Visible.Count(x => !x.CompletedAt.HasValue).ToString()" Hint="Rascunhos preservados" Tone="cyan" />
+<KpiCard Label="Concluídos" Value="@Visible.Count(x => x.CompletedAt.HasValue).ToString()" Hint="Coleta completa, sem aprovação estatística" />
+<KpiCard Label="Amostras preenchidas" Value="@($"{Visible.Sum(x => x.CompleteSamples)} / {Visible.Count * 25}")" Hint="Três leituras por amostra" />
+</section>
+<section class="card"><h2>Andamento dos conjuntos</h2><div class="table-wrap"><table class="cep-daily-table"><thead><tr><th>Conjunto e processo</th><th>Progresso</th><th>Situação</th><th>Atualização local</th><th>Histórico</th></tr></thead><tbody>
+@foreach (var item in Visible)
+{
+<tr><td><strong>#@item.Id · @item.Title</strong><br />@item.ProcessPath<br />@item.CharacteristicName · revisão @item.CharacteristicRevision</td><td><progress max="25" value="@item.CompleteSamples" aria-label="Progresso do conjunto @item.Id"></progress><br />@item.CompleteSamples / 25 amostras · @item.Readings / 75 leituras (@item.ProgressPercent%)</td><td><span class="status-chip">@(item.CompletedAt.HasValue ? "Concluído" : "Rascunho")</span></td><td>@LocalTime.Format(item.UpdatedAt)</td><td><a class="btn ghost" href="@($"/cep-coleta?id={item.Id}")">Abrir e consultar</a></td></tr>
+}
+@if (Visible.Count == 0) { <tr><td colspan="5">Nenhum conjunto para esta data e filtro.</td></tr> }
+</tbody></table></div></section>
+
+@code {
+    private DateTime day = LocalTime.ToLocal(DateTimeOffset.UtcNow).Date;
+    private string filter = "";
+    private string? error;
+    private bool busy;
+    private IReadOnlyList<CepDataset> datasets = [];
+    private List<CepDataset> Visible => datasets.Where(x => string.IsNullOrWhiteSpace(filter) || $"{x.Title} {x.ProcessPath} {x.CharacteristicName}".Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try { datasets = (await Service.DailyAsync(DateOnly.FromDateTime(day), (await Auth.GetAuthenticationStateAsync()).User)).Datasets; }
+        catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

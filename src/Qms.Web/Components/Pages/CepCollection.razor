@@ -1,0 +1,90 @@
+@page "/cep-coleta"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "perm:view")]
+@using Microsoft.AspNetCore.Authorization
+@using Qms.Application.Collection
+@using Qms.Domain.Collection
+
+<PageTitle>Conjunto CEP · QMS</PageTitle>
+<PageHeader Title="Coleta CEP 25 × 3" Breadcrumb="Operação / Conjuntos CEP" />
+<div class="collection-toolbar"><a class="btn ghost" href="/cep-dia">Progresso diário e histórico</a><a class="btn ghost" href="/coleta/importar">Importar CSV ou XLSX na base</a><a class="btn ghost" href="/modelos/Modelo_CEP_25x3.xlsx" download>Baixar ficha Excel CEP 25 × 3</a></div>
+<p class="cep-caption">A ficha Excel calcula média e amplitude. Copie as três colunas de leituras para a colagem abaixo. Para envio de arquivo à base, baixe o template da característica na página Coleta.</p>
+@if (error is not null) { <div class="alert alert-bad" role="alert">@error</div> }
+@if (message is not null) { <div class="alert alert-ok" role="status">@message</div> }
+@if (loading) { <p>Carregando conjunto...</p> }
+else if (dataset is null)
+{
+    <section class="card"><h2>Novo conjunto CEP</h2><p>25 amostras, três leituras por amostra. A média e a amplitude são calculadas sem descartar as leituras originais.</p>
+    @if (canWrite)
+    {
+        <label class="field">Característica e processo<select class="form-control" @bind="characteristicId"><option value="0">Selecione...</option>
+        @foreach (var choice in choices) { <option value="@choice.Characteristic.Id">@choice.ProcessPath / @choice.Characteristic.Name</option> }</select></label>
+        <label class="field">Título do conjunto<input class="form-control" maxlength="120" @bind="title" @bind:event="oninput" /></label>
+        <p>Somente características ativas X̄-R com subgrupo de três leituras. Ajuste o cadastro antes de criar, se necessário.</p>
+        <button class="btn" disabled="@busy" @onclick="CreateAsync">Criar rascunho</button>
+    }
+    else { <p>Seu perfil permite consultar os conjuntos pelo progresso diário.</p> }
+    </section>
+}
+else
+{
+    <section class="card cep-summary"><div><span class="cep-eyebrow">CONJUNTO #@dataset.Id · REVISÃO @dataset.CharacteristicRevision · VERSÃO @dataset.Version</span>
+    <h2>@dataset.Title</h2><p>@dataset.ProcessPath / @dataset.CharacteristicName · @(dataset.Unit ?? "sem unidade")</p>
+    <p>LSL @Number(dataset.Lsl) · Nominal @Number(dataset.Nominal) · USL @Number(dataset.Usl)</p></div>
+    <div><span class="status-chip">@(dataset.CompletedAt.HasValue ? "Concluído" : "Rascunho")</span><strong class="cep-progress-value">@CompleteCount / 25 amostras</strong>
+    <progress max="25" value="@CompleteCount" aria-label="Progresso de preenchimento"></progress><p>@ReadingCount / 75 leituras · @(CompleteCount * 4)% preenchido</p></div></section>
+    <p class="cep-caption">Progresso da grade atual@(dirty ? " — há alterações não salvas." : ".") Conclusão de preenchimento não representa aprovação estatística. Cartas e limites serão entregues na Sprint 2.</p>
+    @if (Editable)
+    {
+        <section class="card"><h2>1 Identificação da coleta digitada</h2><div class="collection-fields">
+        <label class="field">Título<input class="form-control" maxlength="120" @bind="title" @bind:event="oninput" @bind:after="MarkDirty" /></label>
+        <label class="field">Instrumento<select class="form-control" @bind="instrumentId"><option value="">Selecione...</option>@foreach (var item in instruments) { <option value="@item.Id">@item.Code · @item.Name</option> }</select></label>
+        <label class="field">Data e hora local<input class="form-control" type="datetime-local" @bind="collectedAt" /></label>
+        <label class="field">Turno<select class="form-control" @bind="shift"><option>T1</option><option>T2</option><option>T3</option></select></label>
+        <label class="field">Lote<input class="form-control" maxlength="80" @bind="lot" @bind:event="oninput" /></label></div>
+        <button class="btn ghost" @onclick="ApplyMetadata">Aplicar identificação às linhas digitadas</button><p>O horário é de São Paulo. Linhas da base mantêm seu rastreio original. Confira ou ajuste o rastreio de cada linha antes de salvar.</p></section>
+        <section class="card"><h2>2 Origem dos dados</h2>
+        <details><summary>Colar leituras do Excel</summary><p>Uma linha por amostra e três colunas, separadas por TAB, ponto e vírgula ou espaço. Até 25 linhas, sem cabeçalho. A colagem substitui a grade somente após confirmação.</p>
+        <label class="field">Leituras para colar<textarea class="form-control" rows="4" @bind="pasteText" @bind:event="oninput" placeholder="10,02;10,04;10,03"></textarea></label>
+        <label><input type="checkbox" @bind="confirmReplace" /> Confirmo substituir a grade atual pelos dados colados ou selecionados.</label>
+        <button class="btn ghost" @onclick="PasteRows">Conferir e aplicar colagem</button></details>
+        <details><summary>Selecionar amostras da base</summary><p>A busca usa a mesma característica e revisão, três leituras e registros não excluídos. Selecione até 25 amostras; a ordem será cronológica.</p>
+        <div class="collection-fields"><label class="field">Data inicial<input class="form-control" type="date" @bind="sourceFrom" /></label><label class="field">Data final inclusive<input class="form-control" type="date" @bind="sourceTo" /></label>
+        <label class="field">Turno da base<select class="form-control" @bind="sourceShift"><option value="">Todos</option><option>T1</option><option>T2</option><option>T3</option></select></label>
+        <label class="field">Lote da base<input class="form-control" @bind="sourceLot" @bind:event="oninput" /></label></div>
+        <button class="btn ghost" disabled="@busy" @onclick="SearchSourcesAsync">Buscar na base</button>
+        <p>@sources.Count amostras encontradas · @sourceSelection.Count selecionadas</p>
+        @if (searched)
+        {
+        <div class="table-wrap cep-source-table"><table><thead><tr><th>Selecionar</th><th>ID</th><th>Data local</th><th>Leituras</th><th>Instrumento</th><th>Operador</th><th>Origem</th></tr></thead><tbody>
+        @foreach (var source in sources) { <tr><td><input type="checkbox" aria-label="Selecionar amostra @source.Subgroup.Id" checked="@sourceSelection.Contains(source.Subgroup.Id)" @onchange="e => ToggleSource(source.Subgroup.Id, e.Value is true)" /></td><td>@source.Subgroup.Id</td><td>@LocalTime.Format(source.Subgroup.CollectedAt)</td><td>@string.Join(" / ", source.Subgroup.Measurements.OrderBy(x => x.Position).Select(x => Number(x.Value)))</td><td>@source.Instrument</td><td>@source.Operator</td><td>@source.Subgroup.Source</td></tr> }
+        @if (sources.Count == 0) { <tr><td colspan="7">Nenhuma amostra compatível. Confira os filtros ou importe um arquivo na base.</td></tr> }
+        </tbody></table></div>
+        <label><input type="checkbox" @bind="confirmReplace" /> Confirmo substituir a grade atual pelos dados selecionados.</label><button class="btn ghost" @onclick="ApplySources">Aplicar selecionadas à grade</button>
+        }
+        </details></section>
+    }
+    <section class="card"><h2>3 Leituras e médias</h2><div class="table-wrap"><table class="cep-grid"><thead><tr><th>Amostra</th><th>Leitura 1</th><th>Leitura 2</th><th>Leitura 3</th><th>Média</th><th>Amplitude</th><th>Origem e rastreio</th></tr></thead><tbody>
+    @foreach (var row in rows)
+    {
+        <tr @key="row" class="@(row.Complete ? "cep-row-complete" : "")"><td>@row.Position</td>
+        @for (var i = 0; i < 3; i++) { var index = i; <td><input class="form-control cep-reading" aria-label="Amostra @row.Position leitura @(index + 1)" inputmode="decimal" readonly="@(!Editable || row.SourceId.HasValue)" @bind="row.Values[index]" @bind:event="oninput" @bind:after="MarkDirty" /></td> }
+        <td>@Number(row.Mean)</td><td>@Number(row.Range)</td><td><details><summary>@(row.SourceId.HasValue ? $"Base #{row.SourceId}" : "Frontend")</summary>
+        @if (Editable && !row.SourceId.HasValue)
+        {
+            <label class="field">Instrumento da amostra<select class="form-control" @bind="row.InstrumentId" @bind:after="MarkDirty"><option value="">Selecione...</option>@foreach (var item in instruments) { <option value="@item.Id">@item.Code</option> }</select></label>
+            <label class="field">Data e hora da amostra<input class="form-control" type="datetime-local" @bind="row.CollectedAt" @bind:after="MarkDirty" /></label>
+            <label class="field">Turno da amostra<select class="form-control" @bind="row.Shift" @bind:after="MarkDirty"><option>T1</option><option>T2</option><option>T3</option></select></label>
+            <label class="field">Lote da amostra<input class="form-control" @bind="row.Lot" @bind:event="oninput" @bind:after="MarkDirty" /></label>
+        }
+        else { <p>@InstrumentCode(row.InstrumentId)<br />@row.CollectedAt.ToString("dd/MM/yyyy HH:mm")<br />@row.Shift · @row.Lot<br />Operador @row.Operator</p> }
+        </details></td></tr>
+    }
+    </tbody></table></div>
+    @if (Editable) { <div class="collection-toolbar cep-save-bar"><button class="btn ghost" disabled="@busy" @onclick="() => SaveAsync(false)">Salvar rascunho</button><label><input type="checkbox" @bind="confirmComplete" /> Conferi as 25 amostras e o rastreio. A conclusão bloqueia edição.</label><button class="btn" disabled="@(busy || CompleteCount != 25 || !confirmComplete)" @onclick="() => SaveAsync(true)">Concluir conjunto</button></div> }
+    </section>
+    <section class="card"><h2>Histórico do conjunto</h2><p>Eventos persistidos, com horário local. Os detalhes preservam leituras e rastreio antes e depois de cada salvamento.</p>
+    <div class="table-wrap"><table><thead><tr><th>Data local</th><th>Usuário</th><th>Operação</th><th>Registro</th></tr></thead><tbody>
+    @foreach (var entry in history) { <tr><td>@LocalTime.Format(entry.At)</td><td>@entry.Actor</td><td>@ActionName(entry.Action)</td><td><details><summary>Consultar detalhes</summary>@if (entry.Before is not null) { <h3>Antes</h3><pre class="cep-json">@Pretty(entry.Before)</pre> }<h3>Depois</h3><pre class="cep-json">@Pretty(entry.After)</pre></details></td></tr> }
+    </tbody></table></div></section>
+}

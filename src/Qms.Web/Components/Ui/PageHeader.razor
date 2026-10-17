@@ -1,0 +1,12 @@
+<header class="topbar">
+<div>
+<div class="crumbs">@Breadcrumb</div>
+<h1>@Title</h1>
+</div>
+<span class="spacer">
+</span>
+<span class="live">
+<i class="dot">
+</i>Indústria 5.0</span>
+</header>
+@code { [Parameter, EditorRequired] public string Title { get; set; } = ""; [Parameter] public string Breadcrumb { get; set; } = "QMS · CEP"; }
