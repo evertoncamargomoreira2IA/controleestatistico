@@ -1,0 +1,82 @@
+@page "/historico"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "perm:audit.view")]
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Qms.Domain.Auditing
+@using Qms.Infrastructure.Persistence
+@inject QmsDbContext Db
+
+<PageTitle>Histórico · QMS CEP</PageTitle>
+<header class="topbar">
+<div>
+<div class="crumbs">Gestão</div>
+<h1>Histórico</h1>
+</div>
+</header>
+<div class="card">
+<div class="toolbar">
+<div class="field">
+<label>Entidade</label>
+<input class="form-control" @bind="entity" />
+</div>
+<div class="field">
+<label>Ação</label>
+<input class="form-control" @bind="action" />
+</div>
+<div class="field">
+<label>Usuário</label>
+<input class="form-control" @bind="actor" />
+</div>
+<div class="field">
+<label>De</label>
+<input type="date" class="form-control" @bind="from" />
+</div>
+<div class="field">
+<label>Até</label>
+<input type="date" class="form-control" @bind="to" />
+</div>
+<button class="btn" @onclick="() => LoadAsync(0)">Filtrar</button>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Data/hora</th>
+<th>Usuário</th>
+<th>Entidade</th>
+<th>ID</th>
+<th>Ação</th>
+<th>Detalhes</th>
+</tr>
+</thead>
+<tbody>
+    @foreach (var item in rows)
+    {
+        <tr>
+<td>@FormatDate(item.Log.OccurredAt)</td>
+<td>@item.ActorName</td>
+<td>@item.Log.Entity</td>
+<td>@item.Log.EntityId</td>
+<td>@item.Log.Action</td>
+<td>
+<details>
+<summary>Ver alterações</summary>
+<p>Antes</p>
+<pre class="audit-json">@FormatJson(item.Log.BeforeJson)</pre>
+<p>Depois</p>
+<pre class="audit-json">@FormatJson(item.Log.AfterJson)</pre>
+</details>
+</td>
+</tr>
+    }
+    </tbody>
+</table>
+</div>
+<div class="toolbar">
+<button class="btn ghost" disabled="@(page == 0)" @onclick="() => LoadAsync(page - 1)">Anterior</button>
+<span>Página @(page + 1)</span>
+<button class="btn ghost" disabled="@(rows.Count < PageSize)" @onclick="() => LoadAsync(page + 1)">Próxima</button>
+</div>
+</div>

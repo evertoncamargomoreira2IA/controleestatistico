@@ -1,0 +1,309 @@
+:root {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #17212b;
+  background: #f3f6f8;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding-top: 66px;
+}
+
+.banner {
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #7a271a;
+  color: white;
+  text-align: center;
+  padding: 15px 20px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px #0003;
+}
+
+header,
+main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 0 20px;
+}
+
+header {
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+h1 {
+  margin: .2em 0;
+  font-size: clamp(1.6rem, 4vw, 2.25rem);
+}
+
+header p {
+  margin-top: 0;
+  color: #465460;
+}
+
+.card {
+  background: white;
+  border: 1px solid #d6e0e6;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px #17212b0a;
+}
+
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  border: 1px solid #82919b;
+  border-radius: 5px;
+  padding: 9px;
+  color: #17212b;
+  background: #fff;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: 3px solid #8bc5ff;
+  outline-offset: 2px;
+}
+
+textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+}
+
+.help {
+  color: #465460;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+button {
+  font: inherit;
+  font-weight: 650;
+  border: 0;
+  border-radius: 5px;
+  padding: 10px 16px;
+  background: #075985;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #064568;
+}
+
+.secondary {
+  background: #475569;
+}
+
+.messages {
+  padding: 12px 16px;
+  background: #eef5f8;
+  border-left: 4px solid #277c84;
+  margin-bottom: 16px;
+}
+
+.messages p {
+  margin: 5px 0;
+}
+
+.errorbox {
+  color: #7a271a;
+  background: #fff1f0;
+  border-left: 4px solid #b42318;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.errorbox li + li {
+  margin-top: 4px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.charts article,
+.cap-grid article,
+.voices article {
+  min-width: 0;
+}
+
+.charts h3,
+.cap-grid h3 {
+  margin: 8px 0;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #fbfdfe;
+  border: 1px solid #d6e0e6;
+}
+
+.chart text {
+  font: 11px system-ui;
+  fill: #263642;
+}
+
+.chart-legend {
+  margin: 6px 0 0;
+  color: #52616b;
+  font-size: .85rem;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 9px;
+  border-bottom: 1px solid #d6e0e6;
+}
+
+th {
+  background: #edf2f5;
+}
+
+.out {
+  background: #fff0ed;
+  color: #8a1c13;
+  font-weight: 650;
+}
+
+.cap-grid,
+.voices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.metric {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid #e4eaee;
+}
+
+.metric strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.check {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.legend-spec {
+  color: #6b3fa0;
+  font-weight: 650;
+}
+
+.voices article {
+  padding: 10px;
+  background: #f7fafb;
+  border-radius: 7px;
+}
+
+.voices h2 span {
+  display: block;
+  font-size: .85rem;
+  color: #52616b;
+  font-weight: 500;
+}
+
+.voices p {
+  margin: 6px 0;
+}
+
+footer {
+  font-size: .9rem;
+  color: #475569;
+  padding: 4px 0 30px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-top: 82px;
+  }
+
+  .banner {
+    font-size: .9rem;
+    padding: 10px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .charts,
+  .cap-grid,
+  .voices {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  header,
+  main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

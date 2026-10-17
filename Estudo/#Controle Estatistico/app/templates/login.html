@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Entrar · QMS</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+  </head>
+  <body class="login">
+    <main>
+      <h1>QMS · CEP</h1>
+      <form method="post" action="/login">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>
+          Usuário
+          <input name="username" required autocomplete="username">
+        </label>
+        <label>
+          Senha
+          <input name="password" type="password" required autocomplete="current-password">
+        </label>
+        {% if error %}
+          <p role="alert">{{ error }}</p>
+        {% endif %}
+        <button>Entrar</button>
+      </form>
+    </main>
+  </body>
+</html>

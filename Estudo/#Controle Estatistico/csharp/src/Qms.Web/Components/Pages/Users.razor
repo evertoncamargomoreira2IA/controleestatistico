@@ -1,0 +1,119 @@
+@page "/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "perm:users.manage")]
+@using System.Security.Claims
+@using Qms.Application.Users
+@using Qms.Domain.Security
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IUserAdminService UserAdmin
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Usuários · QMS CEP</PageTitle>
+<header class="topbar">
+<div>
+<div class="crumbs">Gestão</div>
+<h1>Usuários</h1>
+</div>
+<span class="spacer">
+</span>
+<button class="btn" @onclick="NewUser">Novo usuário</button>
+</header>
+@if (!string.IsNullOrEmpty(message)) { <div class="alert @(error ? "alert-bad" : "alert-ok")" role="status">@message</div> }
+<div class="toolbar">
+<div class="field">
+<label for="search">Buscar usuário ou nome</label>
+<input id="search" class="form-control" @bind="search" @bind:event="oninput" />
+</div>
+<button class="btn ghost" @onclick="LoadAsync">Buscar</button>
+</div>
+<div class="card table-wrap">
+<table>
+<thead>
+<tr>
+<th>Usuário</th>
+<th>Nome</th>
+<th>Perfil</th>
+<th>Ativo</th>
+<th>Bloqueado até</th>
+<th>Último login</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+@foreach (var user in users)
+{
+    <tr>
+<td>@user.UserName</td>
+<td>@user.FullName</td>
+<td>
+<span class="status s-neutral">@RoleName(user.Role)</span>
+</td>
+<td>@(user.IsActive ? "Sim" : "Não")</td>
+<td>@(user.LockoutEnd?.ToLocalTime().ToString("g") ?? "—")</td>
+<td>—</td>
+<td>
+<button class="btn ghost" @onclick="() => EditUser(user)">Editar</button>
+</td>
+</tr>
+}
+</tbody>
+</table>
+</div>
+@if (editing)
+{
+    <aside class="drawer" aria-label="Cadastro de usuário">
+<h2>@(selected is null ? "Novo usuário" : "Editar usuário")</h2>
+        @if (!string.IsNullOrEmpty(formError)) { <div class="alert alert-bad">@formError</div> }
+        <EditForm Model="model" OnValidSubmit="SaveAsync">
+<DataAnnotationsValidator />
+<ValidationSummary class="validation-summary" role="alert" />
+            @if (selected is null)
+            {
+                <div class="field">
+<label>Usuário</label>
+<InputText class="form-control" @bind-Value="model.UserName" />
+</div>
+            }
+            <div class="field">
+<label>Nome completo</label>
+<InputText class="form-control" @bind-Value="model.FullName" />
+</div>
+<div class="field">
+<label>Perfil</label>
+<InputSelect class="form-control" @bind-Value="model.Role">
+<option value="admin">Administrador</option>
+<option value="engenheiro">Engenheiro</option>
+<option value="tecnico">Técnico</option>
+<option value="qualidade">Qualidade</option>
+<option value="leitor">Leitor</option>
+</InputSelect>
+</div>
+            @if (selected is null)
+            {
+                <div class="field">
+<label>Senha inicial</label>
+<InputText type="password" class="form-control" @bind-Value="model.Password" placeholder="Mínimo 12 caracteres" />
+</div>
+            }
+            else
+            {
+                <div class="field">
+<label>
+<InputCheckbox @bind-Value="model.IsActive" /> Ativo</label>
+</div>
+<div class="field">
+<label>
+<InputCheckbox @bind-Value="model.ResetPassword" /> Redefinir senha</label>
+</div>
+                @if (model.ResetPassword) { <div class="field">
+<label>Nova senha</label>
+<InputText type="password" class="form-control" @bind-Value="model.Password" />
+</div> }
+            }
+            <button class="btn" type="submit">Salvar</button>
+<button class="btn ghost" type="button" @onclick="Close">Cancelar</button>
+</EditForm>
+</aside>
+}

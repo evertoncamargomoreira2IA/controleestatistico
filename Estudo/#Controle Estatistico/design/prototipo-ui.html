@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QMS · CEP — Protótipo de interface</title>
+<style>
+  /* ===== Design tokens (serão a base do tema no Blazor) ===== */
+  :root {
+    --bg-0: #030b1f;           /* fundo profundo */
+    --bg-1: #061538;           /* superfícies */
+    --bg-2: #0a2152;           /* cartões elevados */
+    --line: rgba(120, 170, 255, .14);
+    --line-strong: rgba(120, 170, 255, .28);
+    --text-0: #eaf2ff;
+    --text-1: #a9bedf;
+    --text-2: #6f86ad;
+    --brand: #1f7bff;          /* azul principal */
+    --brand-2: #22d3ee;        /* ciano de dados */
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --spec: #c084fc;           /* especificação ≠ controle */
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0, 8, 30, .45);
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font);
+    color: var(--text-0);
+    background:
+      radial-gradient(1200px 600px at 75% -10%, rgba(31, 123, 255, .35), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(34, 211, 238, .18), transparent 60%),
+      var(--bg-0);
+    overflow-x: hidden;
+  }
+  /* malha de rede (inspirada na imagem, sem copiar) */
+  .mesh {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
+  }
+  .app { position: relative; z-index: 1; display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+  /* ===== Sidebar ===== */
+  aside {
+    border-right: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(6, 21, 56, .85), rgba(3, 11, 31, .9));
+    backdrop-filter: blur(10px);
+    padding: 20px 14px; display: flex; flex-direction: column; gap: 18px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; border-bottom: 1px solid var(--line); }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    box-shadow: 0 0 24px rgba(34, 211, 238, .45); font-weight: 800; letter-spacing: -.5px;
+  }
+  .brand b { display: block; font-size: 15px; letter-spacing: .3px; }
+  .brand small { color: var(--text-2); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  nav .group { color: var(--text-2); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; margin: 14px 10px 6px; }
+  nav a {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
+    color: var(--text-1); text-decoration: none; font-size: 14px; border: 1px solid transparent;
+  }
+  nav a svg { width: 18px; height: 18px; flex: none; opacity: .9; }
+  nav a:hover { background: rgba(31, 123, 255, .10); color: var(--text-0); }
+  nav a.active {
+    background: linear-gradient(90deg, rgba(31, 123, 255, .28), rgba(31, 123, 255, .06));
+    border-color: var(--line-strong); color: var(--text-0);
+    box-shadow: inset 3px 0 0 var(--brand-2);
+  }
+  nav a .soon { margin-left: auto; font-size: 10px; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; }
+  .operator {
+    margin-top: auto; display: flex; gap: 10px; align-items: center; padding: 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: rgba(10, 33, 82, .5);
+  }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #13306f; font-weight: 700; font-size: 13px; }
+  .operator small { color: var(--text-2); display: block; font-size: 11px; }
+
+  /* ===== Top bar ===== */
+  main { padding: 18px 26px 40px; min-width: 0; }
+  .topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .crumbs { color: var(--text-2); font-size: 13px; }
+  .crumbs b { color: var(--text-1); font-weight: 600; }
+  h1 { margin: 2px 0 0; font-size: 26px; font-weight: 650; letter-spacing: -.3px; }
+  .spacer { flex: 1; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-1);
+          border: 1px solid var(--line); padding: 6px 10px; border-radius: 99px; background: rgba(6, 21, 56, .6); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); animation: pulse 2s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); } }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip-select {
+    appearance: none; color: var(--text-0); background: rgba(10, 33, 82, .6); border: 1px solid var(--line);
+    padding: 8px 12px; border-radius: 10px; font: inherit; font-size: 13px;
+  }
+  .btn {
+    border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    color: #00122e; background: linear-gradient(135deg, var(--brand-2), #7dd3fc);
+    box-shadow: 0 6px 20px rgba(34, 211, 238, .25);
+  }
+  .btn.ghost { color: var(--text-0); background: transparent; border: 1px solid var(--line-strong); box-shadow: none; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: linear-gradient(180deg, rgba(10, 33, 82, .72), rgba(6, 21, 56, .72));
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+    backdrop-filter: blur(8px); padding: 16px 18px; min-width: 0;
+  }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card .sub { color: var(--text-2); font-size: 12px; margin-top: 2px; }
+  .card-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .card-head .spacer { flex: 1; }
+
+  .grid { display: grid; gap: 16px; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+  .kpi .label { color: var(--text-1); font-size: 12px; letter-spacing: .4px; }
+  .kpi .value { font-size: 30px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+  .kpi .trend { font-size: 12px; margin-top: 4px; color: var(--text-2); }
+  .kpi .bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .06); margin-top: 12px; overflow: hidden; }
+  .kpi .bar i { display: block; height: 100%; border-radius: 4px; }
+
+  .main-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-1); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+  .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .s-ok { color: var(--ok); background: rgba(52, 211, 153, .12); }
+  .s-warn { color: var(--warn); background: rgba(251, 191, 36, .12); }
+  .s-bad { color: var(--bad); background: rgba(248, 113, 113, .12); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--text-2); font-size: 11px; letter-spacing: .8px; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px; border-bottom: 1px solid rgba(120, 170, 255, .07); font-variant-numeric: tabular-nums; }
+  tr:hover td { background: rgba(31, 123, 255, .06); }
+  td .muted { color: var(--text-2); font-size: 12px; }
+
+  /* assistente centrado no humano (Indústria 5.0) */
+  .assist { border-color: rgba(34, 211, 238, .35); background:
+      linear-gradient(180deg, rgba(34, 211, 238, .10), rgba(6, 21, 56, .72)); }
+  .assist ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .assist li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; font-size: 13px; color: var(--text-1); }
+  .assist li b { color: var(--text-0); font-weight: 600; }
+  .ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; }
+  .note { font-size: 11px; color: var(--text-2); margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+
+  .spark { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .mini { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: rgba(3, 11, 31, .4); }
+  .mini .t { font-size: 12px; color: var(--text-1); display: flex; justify-content: space-between; gap: 6px; }
+  .mini svg { width: 100%; height: 46px; display: block; margin-top: 6px; }
+
+  .proto { position: fixed; right: 14px; bottom: 12px; z-index: 5; font-size: 11px; color: var(--text-2);
+           border: 1px solid var(--line); background: rgba(3, 11, 31, .8); padding: 5px 10px; border-radius: 99px; }
+
+  @media (max-width: 1180px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .main-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    nav { flex-direction: row; flex-wrap: wrap; } nav .group, .operator { display: none; }
+    main { padding: 16px; }
+    .spark { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Malha de rede: pontos e conexões finas, evocando dados conectados -->
+<svg class="mesh" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <radialGradient id="glow"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#7dd3fc" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g stroke="#3b82f6" stroke-opacity=".18" stroke-width="1" fill="none">
+    <path d="M60 720 L260 610 L470 660 L640 540 L860 600 L1040 470 L1260 520 L1480 400"/>
+    <path d="M260 610 L330 430 L520 380 L640 540"/>
+    <path d="M520 380 L760 300 L860 600"/>
+    <path d="M760 300 L980 240 L1040 470"/>
+    <path d="M980 240 L1220 180 L1260 520"/>
+    <path d="M1220 180 L1460 120 L1480 400"/>
+    <path d="M330 430 L140 330 L60 720"/>
+    <path d="M140 330 L380 200 L520 380"/>
+    <path d="M380 200 L620 120 L760 300"/>
+    <path d="M620 120 L900 80 L980 240"/>
+  </g>
+  <g fill="url(#glow)">
+    <circle cx="260" cy="610" r="10"/><circle cx="640" cy="540" r="12"/><circle cx="1040" cy="470" r="10"/>
+    <circle cx="520" cy="380" r="9"/><circle cx="760" cy="300" r="11"/><circle cx="1220" cy="180" r="10"/>
+    <circle cx="380" cy="200" r="8"/><circle cx="980" cy="240" r="9"/><circle cx="1480" cy="400" r="12"/>
+  </g>
+</svg>
+
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark">Q5</div>
+      <div><b>QMS · CEP</b><small>Indústria 5.0</small></div>
+    </div>
+    <nav aria-label="Menu principal">
+      <span class="group">Operação</span>
+      <a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Coleta</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-6 4 3 6-8 3 4"/></svg>Cartas CEP</a>
+      <span class="group">Estudos</span>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M9 20V4M14 20v-7M19 20v-11"/></svg>Capabilidade</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Gage R&amp;R<span class="soon">F5</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l4 4 10-10"/></svg>Kappa<span class="soon">F6</span></a>
+      <span class="group">Gestão</span>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Cadastros</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>Definições</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h5"/></svg>Histórico</a>
+    </nav>
+    <div class="operator">
+      <div class="avatar">EM</div>
+      <div><b style="font-size:13px">Everton</b><small>Engenharia · Turno 1</small></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <div class="crumbs">Montagem / Produto A / <b>Linha 1</b></div>
+        <h1>Painel do processo</h1>
+      </div>
+      <div class="spacer"></div>
+      <span class="live"><span class="dot"></span>Ao vivo · atualizado 15:42</span>
+      <div class="filters">
+        <select class="chip-select" aria-label="Linha"><option>Linha 1</option><option>Linha 2</option></select>
+        <select class="chip-select" aria-label="Período"><option>Hoje</option><option>7 dias</option><option>30 dias</option></select>
+      </div>
+      <button class="btn">+ Registrar amostra</button>
+    </div>
+
+    <section class="grid kpis">
+      <div class="card kpi"><div class="label">Características monitoradas</div><div class="value">48</div><div class="trend">12 toolings · 3 postos</div><div class="bar"><i style="width:100%;background:var(--brand)"></i></div></div>
+      <div class="card kpi"><div class="label">Capazes (Cpk ≥ meta)</div><div class="value" style="color:var(--ok)">41</div><div class="trend">85% do total</div><div class="bar"><i style="width:85%;background:var(--ok)"></i></div></div>
+      <div class="card kpi"><div class="label">Sinais abertos</div><div class="value" style="color:var(--warn)">3</div><div class="trend">2 tendência · 1 fora de limite</div><div class="bar"><i style="width:30%;background:var(--warn)"></i></div></div>
+      <div class="card kpi"><div class="label">Coletas pendentes hoje</div><div class="value">5</div><div class="trend">próxima às 16:00</div><div class="bar"><i style="width:60%;background:var(--brand-2)"></i></div></div>
+    </section>
+
+    <section class="grid main-grid">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Carta X̄ — TL-001 · Altura (mm)</h2><div class="sub">n = 5 · 25 subgrupos · limites calculados em 13/10</div></div>
+          <div class="spacer"></div>
+          <span class="status s-warn">1 sinal</span>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 720 260" role="img" aria-label="Carta X-barra com um ponto acima do limite superior de controle">
+            <defs>
+              <linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".25"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></linearGradient>
+            </defs>
+            <!-- grade -->
+            <g stroke="rgba(120,170,255,.08)"><line x1="48" x2="700" y1="40" y2="40"/><line x1="48" x2="700" y1="90" y2="90"/><line x1="48" x2="700" y1="140" y2="140"/><line x1="48" x2="700" y1="190" y2="190"/><line x1="48" x2="700" y1="240" y2="240"/></g>
+            <g fill="#6f86ad" font-size="11" font-family="Segoe UI, sans-serif" text-anchor="end">
+              <text x="42" y="44">10,15</text><text x="42" y="94">10,08</text><text x="42" y="144">10,01</text><text x="42" y="194">9,94</text><text x="42" y="244">9,87</text>
+            </g>
+            <!-- limites de controle (voz do processo) -->
+            <line x1="48" x2="700" y1="70" y2="70" stroke="#f87171" stroke-dasharray="6 5" stroke-width="1.5"/>
+            <line x1="48" x2="700" y1="140" y2="140" stroke="#a9bedf" stroke-width="1.2"/>
+            <line x1="48" x2="700" y1="210" y2="210" stroke="#f87171" stroke-dasharray="6 5" stroke-width="1.5"/>
+            <g font-size="11" font-family="Segoe UI, sans-serif"><text x="704" y="74" fill="#f87171">LSC</text><text x="704" y="144" fill="#a9bedf">LC</text><text x="704" y="214" fill="#f87171">LIC</text></g>
+            <!-- série -->
+            <path d="M60 150 L86 128 L112 160 L138 142 L164 120 L190 138 L216 165 L242 150 L268 132 L294 146 L320 170 L346 140 L372 128 L398 150 L424 136 L450 158 L476 144 L502 52 L528 148 L554 160 L580 133 L606 142 L632 126 L658 150 L684 138 L684 240 L60 240 Z" fill="url(#area)"/>
+            <polyline fill="none" stroke="#22d3ee" stroke-width="2.2" stroke-linejoin="round"
+              points="60,150 86,128 112,160 138,142 164,120 190,138 216,165 242,150 268,132 294,146 320,170 346,140 372,128 398,150 424,136 450,158 476,144 502,52 528,148 554,160 580,133 606,142 632,126 658,150 684,138"/>
+            <g fill="#061538" stroke="#22d3ee" stroke-width="2">
+              <circle cx="60" cy="150" r="3.5"/><circle cx="86" cy="128" r="3.5"/><circle cx="112" cy="160" r="3.5"/><circle cx="138" cy="142" r="3.5"/><circle cx="164" cy="120" r="3.5"/><circle cx="190" cy="138" r="3.5"/><circle cx="216" cy="165" r="3.5"/><circle cx="242" cy="150" r="3.5"/><circle cx="268" cy="132" r="3.5"/><circle cx="294" cy="146" r="3.5"/><circle cx="320" cy="170" r="3.5"/><circle cx="346" cy="140" r="3.5"/><circle cx="372" cy="128" r="3.5"/><circle cx="398" cy="150" r="3.5"/><circle cx="424" cy="136" r="3.5"/><circle cx="450" cy="158" r="3.5"/><circle cx="476" cy="144" r="3.5"/><circle cx="528" cy="148" r="3.5"/><circle cx="554" cy="160" r="3.5"/><circle cx="580" cy="133" r="3.5"/><circle cx="606" cy="142" r="3.5"/><circle cx="632" cy="126" r="3.5"/><circle cx="658" cy="150" r="3.5"/><circle cx="684" cy="138" r="3.5"/>
+            </g>
+            <!-- ponto fora de controle -->
+            <circle cx="502" cy="52" r="11" fill="rgba(248,113,113,.18)"/>
+            <circle cx="502" cy="52" r="5" fill="#f87171"/>
+            <g font-size="11" font-family="Segoe UI, sans-serif" fill="#fecaca"><text x="514" y="40">Subgrupo 18 · acima do LSC</text></g>
+          </svg>
+        </div>
+        <div class="legend">
+          <span><i style="border-color:#22d3ee"></i>Média do subgrupo</span>
+          <span><i style="border-color:#a9bedf"></i>Linha central</span>
+          <span><i style="border-color:#f87171;border-top-style:dashed"></i>Limites de controle (3σ)</span>
+          <span><i style="border-color:var(--spec);border-top-style:dotted"></i>Especificação: ocultar/mostrar</span>
+        </div>
+      </div>
+
+      <div class="card assist">
+        <div class="card-head"><div><h2>Assistente do turno</h2><div class="sub">O que pede atenção agora</div></div></div>
+        <ul>
+          <li><span class="ico" style="background:rgba(248,113,113,.15);color:var(--bad)">!</span><span><b>TL-001 · Altura</b> — subgrupo 18 acima do LSC. Registre a ação imediata e colete 33 amostras.</span></li>
+          <li><span class="ico" style="background:rgba(251,191,36,.15);color:var(--warn)">↗</span><span><b>TL-014 · Força de inserção</b> — 6 pontos em tendência de alta.</span></li>
+          <li><span class="ico" style="background:rgba(34,211,238,.15);color:var(--brand-2)">⏱</span><span><b>Coleta das 16:00</b> — 5 características na Linha 1.</span></li>
+          <li><span class="ico" style="background:rgba(192,132,252,.15);color:var(--spec)">⚙</span><span><b>INS-007</b> — calibração vence em 4 dias.</span></li>
+        </ul>
+        <div class="note">Sugestões baseadas nas regras configuradas em Definições. A decisão é sempre da pessoa responsável.</div>
+      </div>
+    </section>
+
+    <section class="grid main-grid" style="margin-top:16px">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Capabilidade por característica</h2><div class="sub">Cp/Cpk (σ within) · Pp/Ppk (σ overall) · faixas definidas em Definições</div></div>
+          <div class="spacer"></div><button class="btn ghost">Exportar</button>
+        </div>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr><th>Característica</th><th>Tooling</th><th>n</th><th>Cp</th><th>Cpk</th><th>Ppk</th><th>Estabilidade</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Altura<div class="muted">mm · rev. 2</div></td><td>TL-001</td><td>125</td><td>2,08</td><td>2,00</td><td>1,83</td><td><span class="status s-warn">1 sinal</span></td><td><span class="status s-ok">Bom</span></td></tr>
+              <tr><td>Força de inserção<div class="muted">N · rev. 1</div></td><td>TL-014</td><td>100</td><td>1,52</td><td>1,21</td><td>1,15</td><td><span class="status s-warn">Tendência</span></td><td><span class="status s-warn">Atenção</span></td></tr>
+              <tr><td>Planicidade<div class="muted">mm · rev. 3</div></td><td>TL-022</td><td>150</td><td>1,94</td><td>1,71</td><td>1,66</td><td><span class="status s-ok">Estável</span></td><td><span class="status s-ok">Bom</span></td></tr>
+              <tr><td>Diâmetro do furo<div class="muted">mm · rev. 1</div></td><td>TL-031</td><td>75</td><td>1,08</td><td>0,92</td><td>0,88</td><td><span class="status s-bad">Fora de limite</span></td><td><span class="status s-bad">Ruim</span></td></tr>
+              <tr><td>Torque<div class="muted">N·m · rev. 1</div></td><td>TL-040</td><td>125</td><td>2,41</td><td>2,32</td><td>2,20</td><td><span class="status s-ok">Estável</span></td><td><span class="status s-ok">Bom</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h2>Tendência de Cpk (30 dias)</h2><div class="sub">Linha pontilhada = meta</div></div></div>
+        <div class="spark">
+          <div class="mini"><div class="t"><span>TL-001</span><b style="color:var(--ok)">2,00</b></div>
+            <svg viewBox="0 0 120 46"><line x1="0" x2="120" y1="26" y2="26" stroke="#6f86ad" stroke-dasharray="3 3"/><polyline fill="none" stroke="#34d399" stroke-width="2" points="0,22 15,18 30,20 45,14 60,16 75,12 90,15 105,10 120,12"/></svg></div>
+          <div class="mini"><div class="t"><span>TL-014</span><b style="color:var(--warn)">1,21</b></div>
+            <svg viewBox="0 0 120 46"><line x1="0" x2="120" y1="20" y2="20" stroke="#6f86ad" stroke-dasharray="3 3"/><polyline fill="none" stroke="#fbbf24" stroke-width="2" points="0,14 15,16 30,15 45,20 60,22 75,25 90,27 105,28 120,30"/></svg></div>
+          <div class="mini"><div class="t"><span>TL-031</span><b style="color:var(--bad)">0,92</b></div>
+            <svg viewBox="0 0 120 46"><line x1="0" x2="120" y1="16" y2="16" stroke="#6f86ad" stroke-dasharray="3 3"/><polyline fill="none" stroke="#f87171" stroke-width="2" points="0,24 15,26 30,30 45,28 60,33 75,35 90,34 105,38 120,40"/></svg></div>
+        </div>
+        <div class="note">Limites de especificação (voz do cliente) e limites de controle (voz do processo) aparecem sempre com cores e traços diferentes.</div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="proto">Protótipo visual · dados fictícios</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Importar coleta</h1>
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/coleta/importar/previa" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Arquivo XLSX ou CSV
+    <input type="file" name="file" accept=".xlsx,.csv" required>
+  </label>
+  <button type="submit">Carregar prévia</button>
+</form>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Cadastros</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p class="masterdata-breadcrumb">
+  <a href="/cadastros">Cadastros</a>
+  {% for item, href in breadcrumbs %}
+    / <a href="{{ href }}">{{ item.name }}</a>
+  {% endfor %}
+</p>
+<p><a href="/cadastros/instrumentos">Instrumentos</a></p>
+<div class="masterdata-grid">
+{% for level in levels %}
+  {% set level_index = loop.index0 %}
+  <section class="masterdata-card">
+    <h2>{{ level.label }}</h2>
+    {% if level.rows %}
+    <ul class="masterdata-list">
+      {% for row in level.rows %}
+      <li class="{% if level.selected and level.selected.id == row.id %}is-selected{% endif %}{% if not row.is_active %} is-inactive{% endif %}">
+        {% set params = namespace(values=[]) %}
+        {% for id_name in ['area_id','product_id','line_id','station_id','tooling_id','characteristic_id'] %}
+          {% if loop.index0 < level_index %}{% set params.values = params.values + [id_name ~ '=' ~ path[loop.index0].id] %}{% endif %}
+        {% endfor %}
+        {% set params.values = params.values + [['area_id','product_id','line_id','station_id','tooling_id','characteristic_id'][level_index] ~ '=' ~ row.id] %}
+        <a href="/cadastros?{{ params.values|join('&') }}">{% if level.key == 'toolings' %}{{ row.code }} — {{ row.name }}{% elif level.key == 'characteristics' %}{{ row.name }}{% else %}{{ row.name }}{% endif %}{% if not row.is_active %} (inativo){% endif %}</a>
+        {% if level.key == 'characteristics' %}<small>{{ row.unit or '—' }} | {{ row.lsl if row.lsl is not none else '—' }} / {{ row.nominal if row.nominal is not none else '—' }} / {{ row.usl if row.usl is not none else '—' }} | n={{ row.subgroup_size }} | {{ row.chart_type }} | rev. {{ row.revision }}</small>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if 'masterdata.manage' in permissions or user.role == 'admin' %}
+      {% if level.parent or loop.first %}
+      <form method="post" action="/cadastros" class="masterdata-form">
+        <h3>{{ new_labels[level.key] }}</h3>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="entity" value="{{ level.key }}">
+        <input type="hidden" name="parent_id" value="{{ level.parent.id if level.parent else 0 }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+        {% if level.key == 'toolings' %}<label>Código<input name="code" required></label>{% endif %}
+        <label>Nome<input name="name" required></label>
+        {% if level.key == 'toolings' %}<label>Descrição<input name="description"></label>{% endif %}
+        {% if level.key == 'characteristics' %}
+          <label>Unidade<input name="unit"></label>
+          <label>Tipo de dado<select name="data_type"><option value="continua">Contínua</option><option value="atributo">Atributo</option></select></label>
+          <label>LSL<input name="lsl" type="number" step="any"></label><label>Nominal<input name="nominal" type="number" step="any"></label><label>USL<input name="usl" type="number" step="any"></label>
+          <label>Tamanho do subgrupo<input name="subgroup_size" type="number" min="1" value="1"></label>
+          <label>Tipo de carta<select name="chart_type"><option value="i_mr">I-MR</option><option value="xbar_r">X̄-R</option><option value="xbar_s">X̄-S</option></select></label>
+        {% endif %}
+        <button type="submit">Criar</button>
+      </form>
+      {% endif %}
+      {% if level.selected %}
+      <form method="post" action="/cadastros" class="masterdata-form">
+        <h3>{{ edit_labels[level.key] }}</h3>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="entity" value="{{ level.key }}"><input type="hidden" name="item_id" value="{{ level.selected.id }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+        {% if level.key == 'toolings' %}<label>Código<input name="code" value="{{ level.selected.code }}" required></label>{% endif %}
+        <label>Nome<input name="name" value="{{ level.selected.name }}" required></label>
+        {% if level.key == 'toolings' %}<label>Descrição<input name="description" value="{{ level.selected.description or '' }}"></label>{% endif %}
+        {% if level.key == 'characteristics' %}
+          <label>Unidade<input name="unit" value="{{ level.selected.unit or '' }}"></label>
+          <label>Tipo de dado<select name="data_type"><option value="continua" {% if level.selected.data_type == 'continua' %}selected{% endif %}>Contínua</option><option value="atributo" {% if level.selected.data_type == 'atributo' %}selected{% endif %}>Atributo</option></select></label>
+          <label>LSL<input name="lsl" type="number" step="any" value="{{ level.selected.lsl if level.selected.lsl is not none else '' }}"></label><label>Nominal<input name="nominal" type="number" step="any" value="{{ level.selected.nominal if level.selected.nominal is not none else '' }}"></label><label>USL<input name="usl" type="number" step="any" value="{{ level.selected.usl if level.selected.usl is not none else '' }}"></label>
+          <label>Tamanho do subgrupo<input name="subgroup_size" type="number" min="1" value="{{ level.selected.subgroup_size }}"></label>
+          <label>Tipo de carta<select name="chart_type">{% for value, label in [('i_mr','I-MR'),('xbar_r','X̄-R'),('xbar_s','X̄-S')] %}<option value="{{ value }}" {% if level.selected.chart_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        {% endif %}
+        <label class="masterdata-check"><input type="checkbox" name="is_active" value="true" {% if level.selected.is_active %}checked{% endif %}> Ativo</label>
+        <button type="submit">Salvar</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </section>
+{% endfor %}
+</div>
+{% endblock %}

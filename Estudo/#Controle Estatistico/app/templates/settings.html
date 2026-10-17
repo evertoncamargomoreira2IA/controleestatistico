@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% macro field(name, label, value, step='any', kind='number') %}
+  <label>{{ label }}
+    <input name="{{ name }}" type="{{ kind }}" value="{{ submitted.get(name, value) }}"
+      {% if kind == 'number' %}step="{{ step }}"{% endif %}
+      {% if user.role != 'admin' %}disabled{% endif %}>
+  </label>
+{% endmacro %}
+{% macro check(name, label, value) %}
+  <label>{{ label }}
+    <input name="{{ name }}" type="checkbox" value="1"
+      {% if (name in submitted and submitted.get(name)) or (name not in submitted and value) %}checked{% endif %}
+      {% if user.role != 'admin' %}disabled{% endif %}>
+  </label>
+{% endmacro %}
+{% block content %}
+  <h1>Definições</h1>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/definicoes">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2>Capabilidade</h2>
+    {% for metric, label in [('cp', 'Cp'), ('cpk', 'Cpk'), ('pp', 'Pp'), ('ppk', 'Ppk')] %}
+      <fieldset><legend>{{ label }}</legend>
+        {{ field('capability__' ~ metric ~ '__bad_below', 'Ruim abaixo de', values['capability.' ~ metric]['bad_below']) }}
+        {{ field('capability__' ~ metric ~ '__good_from', 'Bom a partir de', values['capability.' ~ metric]['good_from']) }}
+      </fieldset>
+    {% endfor %}
+    <h2>Gage R&amp;R</h2>
+    {% for metric, label in [('study_percent', '%R&R do estudo'), ('tolerance_percent', '%R&R da tolerância')] %}
+      <fieldset><legend>{{ label }}</legend>
+        {{ field('gage_rr__' ~ metric ~ '__good_max', 'Bom até', values['gage_rr.' ~ metric]['good_max']) }}
+        {{ field('gage_rr__' ~ metric ~ '__bad_above', 'Ruim acima de', values['gage_rr.' ~ metric]['bad_above']) }}
+      </fieldset>
+    {% endfor %}
+    {{ field('gage_rr__ndc_min', 'Ndc mínimo', values['gage_rr.ndc_min'], '1') }}
+    <h2>Kappa</h2>
+    {{ field('kappa__kappa__bad_below', 'Kappa: ruim abaixo de', values['kappa.kappa']['bad_below']) }}
+    {{ field('kappa__kappa__good_from', 'Kappa: bom a partir de', values['kappa.kappa']['good_from']) }}
+    {{ field('kappa__effectiveness_min', 'Efetividade mínima (%)', values['kappa.effectiveness_min']) }}
+    {{ field('kappa__miss_max', 'Taxa máxima de deixar passar (%)', values['kappa.miss_max']) }}
+    {{ field('kappa__false_alarm_max', 'Taxa máxima de alarme falso (%)', values['kappa.false_alarm_max']) }}
+    <h2>Regras de carta</h2>
+    {{ check('chart__outside_3sigma', 'Fora de 3σ', values['chart.outside_3sigma']) }}
+    {{ check('chart__same_side__enabled', 'N pontos do mesmo lado', values['chart.same_side']['enabled']) }}
+    {{ field('chart__same_side__n', 'N pontos do mesmo lado', values['chart.same_side']['n'], '1') }}
+    {{ check('chart__trend__enabled', 'Tendência', values['chart.trend']['enabled']) }}
+    {{ field('chart__trend__n', 'N da tendência', values['chart.trend']['n'], '1') }}
+    {{ check('chart__spec_proximity__enabled', 'Proximidade da especificação', values['chart.spec_proximity']['enabled']) }}
+    {{ field('chart__spec_proximity__percent', 'Proximidade da especificação (%)', values['chart.spec_proximity']['percent']) }}
+    <h2>Frequências</h2>
+    {{ field('frequency__control_limits_days', 'Dias de recálculo dos limites', values['frequency.control_limits_days'], '1') }}
+    {{ field('frequency__msa_validity_days', 'Validade do MSA (dias)', values['frequency.msa_validity_days'], '1') }}
+    <h2>Segurança (somente leitura)</h2>
+    <p>Máximo de tentativas: {{ login_max_attempts }}; bloqueio: {{ login_lock_minutes }} minutos.</p>
+    {% if user.role == 'admin' %}
+      <label>Comentário obrigatório
+        <input name="comment" required value="{{ submitted.get('comment', '') }}">
+      </label>
+      <button>Salvar nova versão</button>
+    {% endif %}
+  </form>
+  <h2>Histórico</h2>
+  <table><thead><tr><th>Versão</th><th>Data/hora</th><th>Autor</th><th>Comentário</th></tr></thead>
+    <tbody>{% for version in versions %}<tr>
+      <td>{{ version.version }}</td><td>{{ format_datetime(version.created_at) }}</td>
+      <td>{{ authors.get(version.created_by, 'Desconhecido') }}</td><td>{{ version.comment }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% if current %}<p>Versão ativa: {{ current.version }}</p>{% endif %}
+  <h2>Diferenças vs. versão anterior</h2>
+  <table><thead><tr><th>Parâmetro</th><th>Antes</th><th>Depois</th></tr></thead>
+    <tbody>{% for label, before, after in diff %}<tr><td>{{ label }}</td><td>{{ before }}</td><td>{{ after }}</td></tr>{% endfor %}</tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Auditoria</h1>
+  <form method="get">
+    <label>
+      Entidade
+      <input name="entity" value="{{ entity }}" placeholder="user ou auth">
+    </label>
+    <button>Filtrar</button>
+  </form>
+  <table>
+    <tr>
+      <th>UTC</th>
+      <th>Ator</th>
+      <th>Entidade</th>
+      <th>ID</th>
+      <th>Ação</th>
+      <th>IP</th>
+      <th>Origem</th>
+    </tr>
+    {% for a in rows %}
+      <tr>
+        <td>{{ a.occurred_at }}</td>
+        <td>{{ a.actor_id or "—" }}</td>
+        <td>{{ a.entity }}</td>
+        <td>{{ a.entity_id or "—" }}</td>
+        <td>{{ a.action }}</td>
+        <td>{{ a.ip_address or "—" }}</td>
+        <td>{{ a.origin or "—" }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <p>
+    {% if page > 1 %}
+      <a href="/auditoria?page={{ page-1 }}&amp;entity={{ entity }}">Anterior</a>
+    {% endif %}
+    <a href="/auditoria?page={{ page+1 }}&amp;entity={{ entity }}">Próxima</a>
+  </p>
+{% endblock %}

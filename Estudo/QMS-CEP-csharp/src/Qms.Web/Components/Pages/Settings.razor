@@ -1,0 +1,146 @@
+@page "/definicoes"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "perm:view")]
+@using System.Security.Claims
+@using System.Globalization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Qms.Application.Settings
+@using Qms.Domain.Security
+@using Qms.Web.Components.Ui
+@inject ISettingsService Service
+@inject Qms.Infrastructure.Persistence.QmsDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+<PageTitle>Definições · QMS CEP</PageTitle>
+<PageHeader Title="Definições" Breadcrumb="Gestão" />
+@if(error is not null){<div class="alert alert-bad" role="alert">@error</div>}
+<EditForm class="settings-form" Model="settings" OnValidSubmit="Save">
+<fieldset class="settings-fieldset" disabled="@(!canSave)">
+<Card Title="Capabilidade">
+<div class="settings-grid">@foreach(var key in new[]{"Cp","Cpk","Pp","Ppk"}){var band=GetBand(key);<div class="field">
+<label>@key · Ruim abaixo de</label>
+<InputNumber class="form-control" @bind-Value="band.BadBelow" />
+<label>Bom a partir de</label>
+<InputNumber class="form-control" @bind-Value="band.GoodFrom" />
+<div class="preview">
+<StatusChip Status="@StatusChip.ChipStatus.Bad" Text="@($"Ruim < {N(band.BadBelow)}")"/>
+<StatusChip Status="@StatusChip.ChipStatus.Warn" Text="Atenção"/>
+<StatusChip Status="@StatusChip.ChipStatus.Ok" Text="@($"Bom ≥ {N(band.GoodFrom)}")"/>
+</div>
+</div>}</div>
+</Card>
+<Card Title="Gage R&amp;R">
+<div class="settings-grid">@foreach(var key in new[]{"StudyPercent","TolerancePercent"}){var band=GetPercent(key);<div class="field">
+<label>@(key=="StudyPercent"?"%R&R do estudo":"%R&R da tolerância") · Bom até</label>
+<InputNumber class="form-control" @bind-Value="band.GoodMax"/>
+<label>Ruim acima de</label>
+<InputNumber class="form-control" @bind-Value="band.BadAbove"/>
+<div class="preview">
+<StatusChip Status="@StatusChip.ChipStatus.Ok" Text="@($"Bom ≤ {N(band.GoodMax)}%")"/>
+<StatusChip Status="@StatusChip.ChipStatus.Warn" Text="Atenção"/>
+<StatusChip Status="@StatusChip.ChipStatus.Bad" Text="@($"Ruim > {N(band.BadAbove)}%")"/>
+</div>
+</div>}<div class="field">
+<label>Ndc mínimo</label>
+<InputNumber class="form-control" @bind-Value="settings.NdcMin"/>
+</div>
+</div>
+</Card>
+<Card Title="Kappa">
+<div class="settings-grid">
+<div class="field">
+<label>Kappa · Ruim abaixo de</label>
+<InputNumber class="form-control" @bind-Value="settings.Kappa.BadBelow"/>
+<label>Bom a partir de</label>
+<InputNumber class="form-control" @bind-Value="settings.Kappa.GoodFrom"/>
+<div class="preview">
+<StatusChip Status="@StatusChip.ChipStatus.Bad" Text="Ruim"/>
+<StatusChip Status="@StatusChip.ChipStatus.Warn" Text="Atenção"/>
+<StatusChip Status="@StatusChip.ChipStatus.Ok" Text="Bom"/>
+</div>
+</div>
+<div class="field">
+<label>Efetividade mínima (%)</label>
+<InputNumber class="form-control" @bind-Value="settings.EffectivenessMin"/>
+<label>Deixar passar máx. (%)</label>
+<InputNumber class="form-control" @bind-Value="settings.MissMax"/>
+<label>Alarme falso máx. (%)</label>
+<InputNumber class="form-control" @bind-Value="settings.FalseAlarmMax"/>
+</div>
+</div>
+</Card>
+<Card Title="Regras de carta">
+<div class="settings-grid">
+<label>
+<InputCheckbox @bind-Value="settings.Outside3Sigma"/> Fora de 3σ</label>
+<div>
+<label>
+<InputCheckbox @bind-Value="settings.SameSide.Enabled"/> Mesmo lado · N</label>
+<InputNumber class="form-control" @bind-Value="settings.SameSide.N"/>
+</div>
+<div>
+<label>
+<InputCheckbox @bind-Value="settings.Trend.Enabled"/> Tendência · N</label>
+<InputNumber class="form-control" @bind-Value="settings.Trend.N"/>
+</div>
+<div>
+<label>
+<InputCheckbox @bind-Value="settings.SpecProximity.Enabled"/> Proximidade da especificação · %</label>
+<InputNumber class="form-control" @bind-Value="settings.SpecProximity.Percent"/>
+</div>
+</div>
+</Card>
+<Card Title="Frequências">
+<div class="settings-grid">
+<div class="field">
+<label>Recálculo dos limites (dias)</label>
+<InputNumber class="form-control" @bind-Value="settings.ControlLimitsDays"/>
+</div>
+<div class="field">
+<label>Validade do MSA (dias)</label>
+<InputNumber class="form-control" @bind-Value="settings.MsaValidityDays"/>
+</div>
+</div>
+</Card>
+@if(canSave){<div class="field">
+<label>Comentário obrigatório da versão</label>
+<InputText class="form-control" @bind-Value="comment" />
+</div>
+<button class="btn" type="submit">Salvar nova versão</button>}
+</fieldset>
+</EditForm>
+<Card Title="Histórico de versões">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Versão</th>
+<th>Data local</th>
+<th>Autor</th>
+<th>Comentário</th>
+</tr>
+</thead>
+<tbody>@foreach(var row in history){<tr>
+<td>@row.Version</td>
+<td>@row.CreatedAt.ToLocalTime().ToString("g",CultureInfo.GetCultureInfo("pt-BR"))</td>
+<td>@Author(row.CreatedBy)</td>
+<td>@row.Comment</td>
+</tr>}</tbody>
+</table>
+</div>
+</Card>
+@if(history.Count>1){<Card Title="Diferenças da versão ativa vs. anterior">
+<table>
+<thead>
+<tr>
+<th>Definição</th>
+<th>Alteração</th>
+</tr>
+</thead>
+<tbody>@foreach(var item in history[0].Diff){<tr>
+<td>@item.Key</td>
+<td>@item.Value</td>
+</tr>}</tbody>
+</table>
+</Card>}

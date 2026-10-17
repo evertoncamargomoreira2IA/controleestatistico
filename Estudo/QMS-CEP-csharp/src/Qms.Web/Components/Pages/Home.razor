@@ -1,0 +1,22 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Qms.Infrastructure.Identity
+@using Qms.Infrastructure.Persistence
+@using Qms.Application.Collection
+<PageTitle>Painel · QMS CEP</PageTitle>
+<PageHeader Title="Painel do processo" Breadcrumb="QMS · CEP / Operação" />
+<section class="grid kpis">
+<KpiCard Label="Usuários ativos" Value="@activeUsers.ToString("N0", ptBr)" Hint="Contas habilitadas no sistema" />
+<KpiCard Label="Subgrupos coletados hoje"
+ Value="@subgroupsToday.ToString("N0", ptBr)"
+ Hint="Subgrupos não excluídos no dia local" Tone="cyan" />
+<KpiCard Label="Cartas CEP" Value="—" Hint="Disponível na F3" Tone="neutral" />
+<KpiCard Label="Capabilidade" Value="—" Hint="Disponível na F4" Tone="neutral" />
+</section>
+<Card Title="Assistente do turno" Subtitle="O que pede atenção agora" Class="assist-card">
+<ChildContent>
+<EmptyState Text="Nenhum sinal aberto. Os alertas aparecerão aqui quando as cartas CEP estiverem ativas." />
+</ChildContent>
+</Card>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Coleta online</h1>
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if ok %}<p class="form-success">Subgrupo registrado.</p>{% endif %}
+<form class="collection-selectors" method="get" action="/coleta">
+  {% set labels = ["Área", "Produto", "Linha", "Posto", "Tooling", "Característica"] %}
+  {% for level in levels %}
+  <label>{{ labels[loop.index0] }}
+    <select name="{{ level.key }}" onchange="this.form.submit()">
+      <option value="">Selecione...</option>
+      {% for row in level.rows %}<option value="{{ row.id }}" {% if level.selected and row.id == level.selected.id %}selected{% endif %}>{{ row.name }}{% if row.code is defined %} ({{ row.code }}){% endif %}</option>{% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+</form>
+
+{% if characteristic and characteristic.is_active %}
+  {% if characteristic.data_type != "continua" %}
+  <p class="form-error">Coleta online disponível somente para características contínuas.</p>
+  {% else %}
+  <section class="collection-spec">
+    <h2>{{ characteristic.name }}</h2>
+    <p>Unidade: {{ characteristic.unit or "—" }} · LSL: {{ characteristic.lsl if characteristic.lsl is not none else "—" }} · Nominal: {{ characteristic.nominal if characteristic.nominal is not none else "—" }} · USL: {{ characteristic.usl if characteristic.usl is not none else "—" }}</p>
+    <p>n = {{ characteristic.subgroup_size }} · Carta: {{ characteristic.chart_type }} · Revisão: {{ characteristic.revision }}</p>
+  </section>
+  <p class="collection-import-links">
+    <a href="/coleta/template.xlsx?characteristic_id={{ characteristic.id }}">Baixar template XLSX</a>
+    <a href="/coleta/template.csv?characteristic_id={{ characteristic.id }}">Baixar template CSV</a>
+    {% if 'collection.create' in permissions or '*' in permissions %}
+    <a href="/coleta/importar">Importar arquivo</a>
+    {% endif %}
+  </p>
+  <form class="collection-entry" method="post" action="/coleta">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for level in levels %}{% if level.selected %}<input type="hidden" name="{{ level.key }}" value="{{ level.selected.id }}">{% endif %}{% endfor %}
+    <input type="hidden" name="characteristic_id" value="{{ characteristic.id }}">
+    <fieldset><legend>Valores do subgrupo</legend>
+      <div class="collection-values">
+        {% for position in range(1, characteristic.subgroup_size + 1) %}
+        <label>Valor {{ position }}
+          <input type="text" name="values" inputmode="decimal" value="{{ submitted.get('values', [])[position - 1] if submitted.get('values', [])|length >= position else '' }}" required>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="collection-fields">
+      <label>Instrumento <select name="instrument_id" required><option value="">Selecione...</option>
+        {% for instrument in instruments %}<option value="{{ instrument.id }}" {% if instrument.calibration_due and instrument.calibration_due < today_local %}disabled{% endif %} {% if submitted.get('instrument_id') == instrument.id|string %}selected{% endif %}>{{ instrument.code }} · {{ instrument.name }}{% if instrument.calibration_due and instrument.calibration_due < today_local %} (calibração vencida){% endif %}</option>{% endfor %}
+      </select></label>
+      <label>Data e hora <input type="datetime-local" name="collected_at" value="{{ submitted.get('collected_at', local_now) }}" required></label>
+      <label>Turno <select name="shift"><option value="">Selecione...</option>{% for turn in ["T1", "T2", "T3"] %}<option {% if submitted.get('shift') == turn %}selected{% endif %}>{{ turn }}</option>{% endfor %}</select></label>
+      <label>Lote <input name="lot" maxlength="80" value="{{ submitted.get('lot', '') }}"></label>
+      <label class="collection-note">Observação <textarea name="note" maxlength="500">{{ submitted.get('note', '') }}</textarea></label>
+    </div>
+    <button type="submit">Registrar subgrupo</button>
+  </form>
+
+  <section><h2>Últimos subgrupos</h2>
+    <div class="table-scroll"><table class="collection-table"><thead><tr><th>Data local</th><th>Valores</th><th>Média</th><th>Amplitude</th><th>Instrumento</th><th>Operador</th><th>Origem</th><th>Estado</th></tr></thead><tbody>
+      {% for subgroup in rows %}
+      {% set values = subgroup.measurements|map(attribute='value')|list %}
+      {% set excluded = subgroup.is_excluded %}
+      <tr class="{% if excluded %}is-excluded{% endif %}"><td>{{ format_local(subgroup.collected_at) }}</td><td>{{ values|join(", ") }}</td><td>{{ ((values|sum) / (values|length))|round(4) }}</td><td>{{ ((values|max) - (values|min))|round(4) }}</td><td>{{ subgroup.instrument.code if subgroup.instrument else "—" }}</td><td>{{ subgroup.operator.full_name }}</td><td>{{ subgroup.source }}</td><td>{% if excluded %}Excluído: {{ subgroup.exclusion_reason }}{% elif 'masterdata.manage' in permissions or '*' in permissions %}<form method="post" action="/coleta/{{ subgroup.id }}/excluir"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input name="reason" maxlength="300" placeholder="Motivo obrigatório" required><button type="submit">Excluir</button></form>{% else %}Ativo{% endif %}</td></tr>
+      {% else %}<tr><td colspan="8">Nenhum subgrupo registrado.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  {% endif %}
+{% endif %}
+{% endblock %}
