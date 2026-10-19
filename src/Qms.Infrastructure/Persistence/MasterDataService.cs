@@ -393,19 +393,11 @@ public sealed class SettingsService(QmsDbContext db, IAuditService audit)
             Get("capability.cpk", d.Cpk),
             Get("capability.pp", d.Pp),
             Get("capability.ppk", d.Ppk),
-            Get("gage_rr.study_percent", d.StudyPercent),
-            Get("gage_rr.tolerance_percent", d.TolerancePercent),
-            Get("gage_rr.ndc_min", d.NdcMin),
-            Get("kappa.kappa", d.Kappa),
-            Get("kappa.effectiveness_min", d.EffectivenessMin),
-            Get("kappa.miss_max", d.MissMax),
-            Get("kappa.false_alarm_max", d.FalseAlarmMax),
             Get("chart.outside_3sigma", d.Outside3Sigma),
             Get("chart.same_side", d.SameSide),
             Get("chart.trend", d.Trend),
             Get("chart.spec_proximity", d.SpecProximity),
-            Get("frequency.control_limits_days", d.ControlLimitsDays),
-            Get("frequency.msa_validity_days", d.MsaValidityDays)
+            Get("frequency.control_limits_days", d.ControlLimitsDays)
         );
     }
 
@@ -418,18 +410,10 @@ public sealed class SettingsService(QmsDbContext db, IAuditService audit)
             ["capability.cpk"] = s.Cpk,
             ["capability.pp"] = s.Pp,
             ["capability.ppk"] = s.Ppk,
-            ["gage_rr.study_percent"] = s.StudyPercent,
-            ["gage_rr.tolerance_percent"] = s.TolerancePercent,
-            ["gage_rr.ndc_min"] = s.NdcMin,
-            ["kappa.kappa"] = s.Kappa,
-            ["kappa.effectiveness_min"] = s.EffectivenessMin,
-            ["kappa.miss_max"] = s.MissMax,
-            ["kappa.false_alarm_max"] = s.FalseAlarmMax,
             ["chart.outside_3sigma"] = s.Outside3Sigma,
             ["chart.same_side"] = s.SameSide,
             ["chart.trend"] = s.Trend,
             ["chart.spec_proximity"] = s.SpecProximity,
             ["frequency.control_limits_days"] = s.ControlLimitsDays,
-            ["frequency.msa_validity_days"] = s.MsaValidityDays,
         };
 }

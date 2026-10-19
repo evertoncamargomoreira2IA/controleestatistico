@@ -98,6 +98,63 @@ public sealed class CepDatasetTests : IDisposable
     private Task<CepDataset> Create() =>
         service.CreateAsync(characteristicId, "CEP de teste", technician);
 
+    [Fact]
+    public async Task Analysis_is_reproducible_immutable_idempotent_and_audited()
+    {
+        var analyses = services.GetRequiredService<ICepAnalysisService>();
+        var engineer = User(Roles.Engenheiro);
+        var set = await Create();
+        await Assert.ThrowsAsync<ArgumentException>(() => analyses.RunAsync(set.Id, engineer));
+        set = await service.SaveAsync(
+            new(set.Id, set.Version, set.Title, Rows(), true),
+            technician
+        );
+        var saved = await analyses.RunAsync(set.Id, engineer);
+        var repeat = await analyses.RunAsync(set.Id, engineer);
+        Assert.Equal(saved.Id, repeat.Id);
+        Assert.Single(await analyses.ListAsync(set.Id, User(Roles.Leitor)));
+        var input = System.Text.Json.JsonSerializer.Deserialize<CepDataset>(saved.InputJson)!;
+        var result = System.Text.Json.JsonSerializer.Deserialize<Qms.Statistics.CepResult>(
+            saved.ResultJson
+        )!;
+        var reproduced = Qms.Statistics.CepCalculator.Calculate(
+            input
+                .Samples.Select(x => new Qms.Statistics.CepReading(
+                    x.Position,
+                    x.Value1!.Value,
+                    x.Value2!.Value,
+                    x.Value3!.Value
+                ))
+                .ToArray(),
+            input.Nominal,
+            input.Lsl,
+            input.Usl
+        );
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(reproduced), saved.ResultJson);
+        Assert.Equal(10.03, result.Mean, 10);
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<QmsDbContext>();
+        Assert.Single(await db.AuditLogs.Where(x => x.Entity == "cep_analysis").ToListAsync());
+        var stored = await db.CepAnalyses.SingleAsync();
+        stored.ResultJson = "tampered";
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+    }
+
+    [Theory]
+    [InlineData(Roles.Tecnico)]
+    [InlineData(Roles.Leitor)]
+    public async Task Analysis_write_permission_is_checked_on_server(string role)
+    {
+        var analyses = services.GetRequiredService<ICepAnalysisService>();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            analyses.RunAsync(1, User(role))
+        );
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            analyses.ListAsync(null, new ClaimsPrincipal())
+        );
+        Assert.Empty(await analyses.ListAsync(null, User(Roles.Leitor)));
+    }
+
     private CepRowInput[] Rows(int complete = 25) =>
         Enumerable
             .Range(1, 25)

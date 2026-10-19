@@ -8,12 +8,6 @@ public sealed class QualitySettingsTests
     [InlineData("cpk", 1.33, Classification.Good)]
     [InlineData("cpk", 1.0, Classification.Attention)]
     [InlineData("cpk", 0.9999, Classification.Bad)]
-    [InlineData("gage_rr_study", 10, Classification.Good)]
-    [InlineData("gage_rr_study", 30, Classification.Attention)]
-    [InlineData("gage_rr_study", 30.01, Classification.Bad)]
-    [InlineData("kappa", .90, Classification.Good)]
-    [InlineData("kappa", .75, Classification.Attention)]
-    [InlineData("kappa", .7499, Classification.Bad)]
     public void Classifies_boundary_values(string metric, double value, Classification expected) =>
         Assert.Equal(expected, Classifier.Classify(metric, value));
 

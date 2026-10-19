@@ -11,7 +11,8 @@ Esta skill acompanha o projeto; não implica instalação global. Os caminhos ab
 
 - Versão vigente: C# / .NET 10 / Blazor Interactive Server, na raiz. O Python anterior foi substituído e continua disponível no histórico Git.
 - Sprint 1: coleta CEP 25 × 3, rascunho, seleção da base, histórico e progresso de preenchimento. Ler `docs/sprint-1-resultados.md` para evidências e limites.
-- Próxima entrega: Sprint 2, motor X̄-R e cartas. Ler `docs/roteiro-sprints.md`, `docs/referencias/requisitos-referencias.md` e `docs/spc-formulas.md`.
+- Sprint 2: motor X̄-R e cartas entregues. Ler `docs/sprint-2-resultados.md` e `skills/qms-cep-sprint-02/SKILL.md`. Próxima etapa: CEP operacional (Sprint 3), depois Cp/Cpk (Sprint 4), conforme autorização do usuário.
+- Escopo vigente desde 19/10/2026: somente CEP e Cp/Cpk. Kappa e Gage R&R removidos do produto e do roteiro; valores antigos permanecem apenas no histórico do banco e do Git.
 - `docs/referencias/frontend-cep-desejado.png` é o modelo solicitado para a análise: carta à esquerda, distribuição lateral e indicadores abaixo. Preservar a distinção entre especificação, nominal, média e limites de controle.
 - `docs/referencias/especificacoes-tooling.png` é a fonte dos 11 cadastros. `ReferenceFixtures.cs` usa IDs provisórios e tolerâncias assimétricas; não substituir revisões existentes pelo seed.
 

@@ -4,6 +4,7 @@
 @using Qms.Application.Collection
 @using Qms.Domain.Collection
 @inject ICepDatasetService Service
+@inject ICepAnalysisService Analyses
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
 
 <PageTitle>Progresso diário CEP · QMS</PageTitle>
@@ -11,6 +12,7 @@
 <div class="collection-toolbar cep-daily-toolbar"><a class="btn" href="/cep-coleta">Novo conjunto CEP</a><label class="field">Data de criação<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="LoadAsync">Consultar data</button><label class="field">Filtrar processo, título ou característica<input class="form-control" @bind="filter" @bind:event="oninput" /></label></div>
 @if (error is not null) { <div class="alert alert-bad" role="alert">@error</div> }
 <p>Conjuntos criados na data local de São Paulo, com seu estado atual. Abra o conjunto para consultar cada salvamento no histórico. A programação e as metas do turno serão disponibilizadas na Sprint 3.</p>
+<p><strong>@Visible.Count(x => analyzed.Contains(x.Id)) análises salvas</strong> · @Visible.Count(x => x.CompletedAt.HasValue && !analyzed.Contains(x.Id)) conjuntos completos aguardando análise. <a href="/cep-cartas">Consultar cartas e sinais</a>.</p>
 <section class="grid kpis">
 <KpiCard Label="Conjuntos na data" Value="@Visible.Count.ToString()" Hint="Aplicado o filtro de processo" />
 <KpiCard Label="Em preenchimento" Value="@Visible.Count(x => !x.CompletedAt.HasValue).ToString()" Hint="Rascunhos preservados" Tone="cyan" />
@@ -31,13 +33,14 @@
     private string? error;
     private bool busy;
     private IReadOnlyList<CepDataset> datasets = [];
+    private HashSet<int> analyzed = [];
     private List<CepDataset> Visible => datasets.Where(x => string.IsNullOrWhiteSpace(filter) || $"{x.Title} {x.ProcessPath} {x.CharacteristicName}".Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
         if (busy) return;
         busy = true; error = null;
-        try { datasets = (await Service.DailyAsync(DateOnly.FromDateTime(day), (await Auth.GetAuthenticationStateAsync()).User)).Datasets; }
+        try { var user = (await Auth.GetAuthenticationStateAsync()).User; datasets = (await Service.DailyAsync(DateOnly.FromDateTime(day), user)).Datasets; analyzed = (await Analyses.ListAsync(null,user)).Select(x=>x.DatasetId).ToHashSet(); }
         catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException) { error = ex.Message; }
         finally { busy = false; }
     }

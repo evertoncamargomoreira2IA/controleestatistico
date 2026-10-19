@@ -1,5 +1,17 @@
 # Fórmulas do método X̄-R
 
+## Implementação da Sprint 2
+
+Método `xbar-r-25x3-v1`, exclusivamente 25 subgrupos de três leituras finitas, com posições únicas de 1 a 25. Constantes fixas n=3: A₂=1,023; D₃=0; D₄=2,574. Referência do método: [NIST 6.3.1.1](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc311.htm); valores de A₂/D₄ também conferidos no [manual NIOSH, páginas PDF 59 e 94](https://stacks.cdc.gov/view/cdc/178780/cdc_178780_DS1.pdf).
+
+Sinais: média estritamente fora de LIC/LSC na carta X̄, amplitude estritamente fora dos limites na R. Regras próprias solicitadas: sete médias estritamente crescentes, todas acima do nominal, ou sete estritamente decrescentes, todas abaixo do nominal. Empates e igualdade ao nominal interrompem a sequência; janelas sobrepostas contam separadamente. Sem nominal, essas regras não são avaliadas. Amplitude média zero é advertência explícita, sem cálculo de índices de capacidade.
+
+Contagens de especificação são separadas para 75 leituras e 25 médias; igualdade aos limites é aceita. A distribuição lateral mostra 25 médias em seis classes, compartilhando a escala vertical da carta. Os limites são estimados dentro do próprio conjunto, para análise inicial, sem aprovação nem aplicação automática a conjuntos futuros.
+
+As definições gerais editáveis de cartas ainda não controlam este método fixo. A integração, parametrização e aprovação dos limites são parte do CEP operacional. A análise salva preserva entrada e resultados JSON, versão do método, revisão e usuário. Nenhum Cp/Cpk é calculado nesta implementação.
+
+## Referência para capacidade futura
+
 Versão: `xbar-r-1.0.0`. Para k subgrupos de tamanho constante n e observações xᵢⱼ:
 
 - Média do subgrupo: x̄ᵢ = Σxᵢⱼ/n; amplitude: Rᵢ = máximo − mínimo.

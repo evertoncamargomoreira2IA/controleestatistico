@@ -2,6 +2,8 @@
 
 Requisitos acordados em 17/10/2026. Aplicação web C# / ASP.NET Core / Blazor para servidor corporativo. Base copiada de Desktop/Claude/#Controle Estatistico/csharp; original preservada. A cópia não inclui bancos de dados, binários ou caches.
 
+Atualização de escopo em 19/10/2026: Kappa e Gage R&R retirados. Foco em CEP e Cp/Cpk. Sprints 0, 1 e 2 entregues para validação local; homologação corporativa permanece separada.
+
 ## Requisitos transversais
 
 - Todo módulo deve oferecer histórico consultável: autor, data/hora, origem, parâmetros, revisões, resultado, situação e alterações. Estudos aprovados não são sobrescritos; correções geram revisão. Auditoria técnica e histórico operacional são complementares.
@@ -28,10 +30,8 @@ Requisitos acordados em 17/10/2026. Aplicação web C# / ASP.NET Core / Blazor p
 | 3 | CEP operacional e gestão diária | Programação diária, metas, pendências, limites aprovados, regras e ocorrências; histórico navegável |
 | 4 | Cp/Cpk 33 × 3 | Método validado, índices conferidos e estudos salvos com revisão |
 | 5 | Capabilidade completa | Pp/Ppk, histograma, normalidade e PPM conferidos |
-| 6 | Gage R&R | Estudos e gráficos validados, histórico e progresso |
-| 7 | Kappa | Concordância validada, histórico e progresso |
-| 8 | Gestão e relatórios | Ações, aprovações, filtros históricos e exportação PDF/Excel |
-| 9 | Homologação corporativa | SQL Server, publicação, HTTPS, concorrência, backup e restauração testados |
+| 6 | Gestão e relatórios | Ações, aprovações, filtros históricos e exportação PDF/Excel |
+| 7 | Homologação corporativa | SQL Server, publicação, HTTPS, concorrência, backup e restauração testados |
 
 ## Verificação por sprint
 
@@ -43,7 +43,7 @@ Requisitos acordados em 17/10/2026. Aplicação web C# / ASP.NET Core / Blazor p
 
 ## Pendências estruturais identificadas na Sprint 0
 
-- Motor Qms.Statistics ainda sem implementação; cartas e estudos futuros desabilitados no menu.
+- Na Sprint 0 o motor ainda não tinha implementação; o motor X̄-R e as cartas foram entregues na Sprint 2.
 - Histórico existente é auditoria; faltam entidades de conjuntos, estudos, programação diária e histórico operacional.
 - Painel atual conta usuários e subgrupos do dia; não mede metas ou conclusão de estudos.
 - Migrações atuais SQLite: gerar e validar conjunto específico para SQL Server antes da produção.

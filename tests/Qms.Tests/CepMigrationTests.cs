@@ -20,7 +20,9 @@ public sealed class CepMigrationTests
         var services = new ServiceCollection().AddLogging();
         // Other domain tests use Identity's default schema. Isolate this provider's model
         // cache because migrations intentionally use the application's Identity v3 schema.
-        services.AddDbContext<QmsDbContext>(options => options.UseSqlite(connection).EnableServiceProviderCaching(false));
+        services.AddDbContext<QmsDbContext>(options =>
+            options.UseSqlite(connection).EnableServiceProviderCaching(false)
+        );
         services
             .AddIdentityCore<ApplicationUser>(options =>
                 options.Stores.SchemaVersion = IdentitySchemaVersions.Version3
@@ -56,6 +58,7 @@ public sealed class CepMigrationTests
             preserved.Measurements.OrderBy(x => x.Position).Select(x => x.Value)
         );
         Assert.Empty(await db.CepDatasets.ToListAsync());
+        Assert.Empty(await db.CepAnalyses.ToListAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
     }
 }

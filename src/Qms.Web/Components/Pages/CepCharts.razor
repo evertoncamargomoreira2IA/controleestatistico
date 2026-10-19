@@ -1,0 +1,101 @@
+@page "/cep-cartas"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "perm:view")]
+@using System.Text.Json
+@using Qms.Application.Collection
+@using Qms.Domain.Collection
+@using Qms.Domain.Security
+@using Qms.Statistics
+@using Microsoft.EntityFrameworkCore
+@inject ICepAnalysisService Analyses
+@inject ICepDatasetService Datasets
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
+@inject NavigationManager Navigation
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Cartas CEP · QMS</PageTitle>
+<PageHeader Title="Cartas CEP" Breadcrumb="Operação / Análises X̄-R" />
+<p>25 amostras × três leituras. A carta X̄ usa médias; a carta R acompanha a variação dentro das amostras.</p>
+@if (error is not null) { <div class="alert alert-bad" role="alert">@error</div> }
+<section class="card">
+<h2>Analisar um conjunto concluído</h2>
+<div class="collection-toolbar cep-daily-toolbar">
+<label class="field">Data de criação<input type="date" class="form-control" @bind="day" /></label>
+<button class="btn ghost" disabled="@busy" @onclick="FindAsync">Buscar conjuntos</button>
+<label class="field">Conjunto<select class="form-control" @bind="selected"><option value="0">Selecione...</option>@foreach(var d in candidates){<option value="@d.Id">#@d.Id · @d.Title · @d.CharacteristicName</option>}</select></label>
+@if (canRun) { <button class="btn" disabled="@(busy || selected == 0)" @onclick="RunAsync">Analisar e salvar</button> }
+</div>
+<p>O resultado é salvo com as leituras, a revisão e a versão do método. Reanalisar a mesma versão abre o registro existente. Limites estimados deste conjunto; aprovação e limites fixos de acompanhamento pertencem à etapa operacional.</p>
+@if (!canRun) { <p>Seu perfil permite consultar análises salvas. Engenharia, Qualidade ou Administração executam novas análises.</p> }
+@if (candidates.Count == 0) { <p>Nenhum conjunto concluído nesta data. <a href="/cep-dia">Consultar o progresso da coleta</a>.</p> }
+</section>
+@if (result is not null && record is not null && snapshot is not null)
+{
+<section class="card"><h2>#@record.Id · @snapshot.Title</h2><p>@snapshot.ProcessPath / @snapshot.CharacteristicName · @snapshot.Unit</p>
+<p>Conjunto #@record.DatasetId · versão @record.DatasetVersion · revisão @snapshot.CharacteristicRevision · @record.Method · salvo em @LocalTime.Format(record.CreatedAt) por @Author(record.CreatedBy)</p>
+<a href="@($"/cep-coleta?id={record.DatasetId}")">Consultar leituras e histórico da coleta</a>
+<p class="cep-analysis-status">@(result.ZeroRange ? "Variação intramostra nula — investigar resolução e coleta." : result.Signals.Count == 0 ? "Sem sinais nas regras avaliadas" : $"{result.Signals.Count} sinais de controle ou tendência — investigar")</p>
+<p>Sem sinais não comprova estabilidade. Especificação e controle estatístico são avaliações distintas.</p></section>
+<CepPlots Result="result" @key="record.Id" />
+<section class="card"><h2>Resultado das regras</h2>
+<div class="cep-rule-row"><strong>Controle X̄</strong><span>Médias fora de LIC/LSC</span><b>@result.Signals.Count(x => x.Code == "x-outside")</b></div>
+<div class="cep-rule-row"><strong>Controle R</strong><span>Amplitudes fora de LIC/LSC</span><b>@result.Signals.Count(x => x.Code == "r-outside")</b></div>
+<div class="cep-rule-row"><strong>7 crescentes</strong><span>Sete médias estritamente crescentes, todas acima do nominal</span><b>@RuleStatus("seven-up")</b></div>
+<div class="cep-rule-row"><strong>7 decrescentes</strong><span>Sete médias estritamente decrescentes, todas abaixo do nominal</span><b>@RuleStatus("seven-down")</b></div>
+<p>Empates e valores iguais ao nominal interrompem a sequência. Janelas sobrepostas são listadas separadamente.</p>
+<p>Fora da especificação: <strong>@result.IndividualOutsideSpec / 75 leituras</strong> e <strong>@result.MeansOutsideSpec / 25 médias</strong>. @(result.Lsl is null && result.Usl is null ? "Sem limites de especificação cadastrados; contagem não aplicável." : "São avaliados somente os limites cadastrados.")</p>
+@if (result.Signals.Count > 0) { <div class="table-wrap"><table><thead><tr><th>Carta</th><th>Amostras</th><th>Sinal</th></tr></thead><tbody>@foreach(var signal in result.Signals){<tr><td>@signal.Chart</td><td>@signal.From–@signal.To</td><td>@signal.Description</td></tr>}</tbody></table></div> }
+<details><summary>Valores e limites para conferência</summary><p>X̄̄ @N(result.Mean) · R̄ @N(result.AverageRange) · A₂ 1,023 · D₃ 0 · D₄ 2,574</p><p>X̄: LIC @N(result.XLower) · LSC @N(result.XUpper). R: LIC @N(result.RLower) · LSC @N(result.RUpper).</p><div class="table-wrap"><table><thead><tr><th>Amostra</th><th>Média</th><th>Amplitude</th></tr></thead><tbody>@foreach(var p in result.Points){<tr><td>@p.Position</td><td>@N(p.Mean)</td><td>@N(p.Range)</td></tr>}</tbody></table></div></details>
+</section>
+}
+<section class="card"><h2>Histórico de análises</h2>
+<label class="field">Filtrar conjunto ou processo<input class="form-control" @bind="filter" @bind:event="oninput" /></label>
+<div class="table-wrap"><table><thead><tr><th>Análise</th><th>Conjunto e processo</th><th>Data local e autor</th><th>Método</th><th>Consulta</th></tr></thead><tbody>
+@foreach(var row in history.Where(Matches)) { var d = JsonSerializer.Deserialize<CepDataset>(row.InputJson)!;
+<tr><td>#@row.Id</td><td>#@row.DatasetId · @d.Title<br />@d.ProcessPath / @d.CharacteristicName</td><td>@LocalTime.Format(row.CreatedAt)<br />@Author(row.CreatedBy)</td><td>@row.Method</td><td><a class="btn ghost" href="@($"/cep-cartas?analysisId={row.Id}")">Abrir análise</a></td></tr> }
+@if(history.Count == 0){<tr><td colspan="5">Nenhuma análise salva.</td></tr>}
+</tbody></table></div></section>
+
+@code {
+    [SupplyParameterFromQuery] public int? DatasetId { get; set; }
+    [SupplyParameterFromQuery] public int? AnalysisId { get; set; }
+    private System.Security.Claims.ClaimsPrincipal user = new();
+    private DateTime day = LocalTime.ToLocal(DateTimeOffset.UtcNow).Date;
+    private IReadOnlyList<CepDataset> candidates = [];
+    private IReadOnlyList<CepAnalysis> history = [];
+    private int selected;
+    private bool busy, canRun;
+    private string? error;
+    private string filter = "";
+    private Dictionary<string,string> authors = [];
+    private CepAnalysis? record;
+    private CepResult? result;
+    private CepDataset? snapshot;
+    protected override async Task OnParametersSetAsync()
+    {
+        error = null; record = null; result = null; snapshot = null;
+        try {
+            user = (await Auth.GetAuthenticationStateAsync()).User;
+            canRun = Roles.All.Any(r => user.IsInRole(r) && Permissions.Allows(r, Permissions.StudiesRun));
+            if (DatasetId.HasValue) { var d = await Datasets.GetAsync(DatasetId.Value, user); day = LocalTime.ToLocal(d.CreatedAt).Date; selected = d.Id; }
+            await FindAsync(); history = await Analyses.ListAsync(null, user);
+            using var scope = Scopes.CreateScope();
+            authors = await scope.ServiceProvider.GetRequiredService<Qms.Infrastructure.Persistence.QmsDbContext>().Users.AsNoTracking().ToDictionaryAsync(x=>x.Id,x=>x.FullName);
+            if (AnalysisId.HasValue) Show(await Analyses.GetAsync(AnalysisId.Value, user));
+            else if (DatasetId.HasValue) { var old = history.FirstOrDefault(x => x.DatasetId == DatasetId); if (old is not null) Show(old); }
+            if(snapshot is not null) { day = LocalTime.ToLocal(snapshot.CreatedAt).Date; await FindAsync(); }
+        } catch(Exception ex) when(ex is ArgumentException or UnauthorizedAccessException) { error = ex.Message; }
+    }
+    private async Task FindAsync() { candidates = (await Datasets.DailyAsync(DateOnly.FromDateTime(day), user)).Datasets.Where(x => x.CompletedAt.HasValue).ToArray(); if(!candidates.Any(x => x.Id == selected)) selected = 0; }
+    private async Task RunAsync() {
+        if(busy) return; busy = true; error = null;
+        try { var saved = await Analyses.RunAsync(selected, user); Navigation.NavigateTo($"/cep-cartas?analysisId={saved.Id}"); }
+        catch(Exception ex) when(ex is ArgumentException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException) { error = ex is Microsoft.EntityFrameworkCore.DbUpdateException ? "Outra análise pode ter sido salva simultaneamente. Consulte o histórico e tente novamente." : ex.Message; }
+        finally { busy = false; }
+    }
+    private void Show(CepAnalysis value) { record=value; result=JsonSerializer.Deserialize<CepResult>(value.ResultJson); snapshot=JsonSerializer.Deserialize<CepDataset>(value.InputJson); selected=value.DatasetId; }
+    private bool Matches(CepAnalysis row) => string.IsNullOrWhiteSpace(filter) || $"{row.DatasetId} {row.InputJson}".Contains(filter, StringComparison.OrdinalIgnoreCase);
+    private string Author(string id) => authors.GetValueOrDefault(id,id);
+    private string RuleStatus(string code) => result?.Nominal is null ? "Não avaliada: sem nominal" : result.Signals.Any(x => x.Code == code) ? "Sinal" : "Sem sinal";
+    private static string N(double value) => value.ToString("0.######", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+}

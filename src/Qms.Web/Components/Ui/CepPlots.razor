@@ -1,0 +1,24 @@
+@using Qms.Statistics
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+<section class="cep-chart-card">
+<h2>Carta X̄ · médias das três coletas</h2>
+<div class="cep-chart-layout"><div class="cep-chart-main"><canvas @ref="xCanvas" role="img" aria-label="Carta das 25 médias. Valores disponíveis na tabela de conferência."></canvas></div><div class="cep-chart-dist"><canvas @ref="distribution" role="img" aria-label="Distribuição das 25 médias, na mesma escala vertical da carta X barra."></canvas></div></div>
+<div class="cep-chart-legend"><span class="legend-mean">Médias</span><span class="legend-center">Média global</span><span>Nominal (cinza)</span><span class="legend-control">LIC / LSC (tracejados)</span><span class="legend-spec">LSL / USL (contínuos)</span></div>
+<p>Distribuição das médias, em seis classes. As linhas de especificação se referem às leituras individuais; médias dentro delas não garantem conformidade das 75 leituras.</p>
+</section>
+<section class="cep-chart-card"><h2>Carta R · amplitude das três coletas</h2><div class="cep-chart-range"><canvas @ref="rCanvas" role="img" aria-label="Carta das 25 amplitudes. Valores disponíveis na tabela de conferência."></canvas></div><p>Linha central R̄; limites de controle em vermelho tracejado. A especificação dimensional não se aplica à amplitude.</p></section>
+@if (error is not null) { <div class="alert alert-bad" role="alert">@error Os valores continuam disponíveis na tabela de conferência.</div> }
+@code {
+    [Parameter, EditorRequired] public CepResult Result { get; set; } = default!;
+    private ElementReference xCanvas, rCanvas, distribution;
+    private IJSObjectReference? module;
+    private string? error;
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!firstRender) return;
+        try { module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/cep-charts.js"); await module.InvokeVoidAsync("render", xCanvas, rCanvas, distribution, Result); }
+        catch(JSException) { error = "Não foi possível desenhar as cartas."; StateHasChanged(); }
+    }
+    public async ValueTask DisposeAsync() { if(module is not null) try { await module.InvokeVoidAsync("dispose", xCanvas, rCanvas, distribution); await module.DisposeAsync(); } catch(JSDisconnectedException) { } }
+}

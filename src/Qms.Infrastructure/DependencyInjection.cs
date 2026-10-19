@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<ICepDatasetService, CepDatasetService>();
+        services.AddScoped<ICepAnalysisService, CepAnalysisService>();
         services.AddScoped<IImportService, ImportService>();
         services.AddScoped<ITemplateService, TemplateService>();
         return services;

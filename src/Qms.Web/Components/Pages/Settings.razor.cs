@@ -45,9 +45,6 @@ public partial class Settings
             _ => settings.Ppk,
         };
 
-    private PercentForm GetPercent(string key) =>
-        key == "StudyPercent" ? settings.StudyPercent : settings.TolerancePercent;
-
     private static string N(double n) => n.ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
 
     private async Task Save()
@@ -81,14 +78,6 @@ public partial class Settings
         public Band ToBand() => new(BadBelow, GoodFrom);
     }
 
-    private sealed class PercentForm(PercentBand value)
-    {
-        public double GoodMax { get; set; } = value.GoodMax;
-        public double BadAbove { get; set; } = value.BadAbove;
-
-        public PercentBand ToBand() => new(GoodMax, BadAbove);
-    }
-
     private sealed class RunForm(RunRule value)
     {
         public bool Enabled { get; set; } = value.Enabled;
@@ -111,19 +100,11 @@ public partial class Settings
         public BandForm Cpk { get; } = new(value.Cpk);
         public BandForm Pp { get; } = new(value.Pp);
         public BandForm Ppk { get; } = new(value.Ppk);
-        public PercentForm StudyPercent { get; } = new(value.StudyPercent);
-        public PercentForm TolerancePercent { get; } = new(value.TolerancePercent);
-        public int NdcMin { get; set; } = value.NdcMin;
-        public BandForm Kappa { get; } = new(value.Kappa);
-        public double EffectivenessMin { get; set; } = value.EffectivenessMin;
-        public double MissMax { get; set; } = value.MissMax;
-        public double FalseAlarmMax { get; set; } = value.FalseAlarmMax;
         public bool Outside3Sigma { get; set; } = value.Outside3Sigma;
         public RunForm SameSide { get; } = new(value.SameSide);
         public RunForm Trend { get; } = new(value.Trend);
         public ProximityForm SpecProximity { get; } = new(value.SpecProximity);
         public int ControlLimitsDays { get; set; } = value.ControlLimitsDays;
-        public int MsaValidityDays { get; set; } = value.MsaValidityDays;
 
         public QualitySettings ToSettings() =>
             new(
@@ -131,19 +112,11 @@ public partial class Settings
                 Cpk.ToBand(),
                 Pp.ToBand(),
                 Ppk.ToBand(),
-                StudyPercent.ToBand(),
-                TolerancePercent.ToBand(),
-                NdcMin,
-                Kappa.ToBand(),
-                EffectivenessMin,
-                MissMax,
-                FalseAlarmMax,
                 Outside3Sigma,
                 SameSide.ToRule(),
                 Trend.ToRule(),
                 SpecProximity.ToRule(),
-                ControlLimitsDays,
-                MsaValidityDays
+                ControlLimitsDays
             );
     }
 }

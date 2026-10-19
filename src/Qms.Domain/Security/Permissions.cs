@@ -8,7 +8,6 @@ public static class Permissions
     public const string MasterdataManage = "masterdata.manage";
     public const string CollectionCreate = "collection.create";
     public const string StudiesRun = "studies.run";
-    public const string MsaApprove = "msa.approve";
     public const string AuditView = "audit.view";
 
     public static IReadOnlyList<string> All { get; } =
@@ -19,7 +18,6 @@ public static class Permissions
         MasterdataManage,
         CollectionCreate,
         StudiesRun,
-        MsaApprove,
         AuditView,
     ];
 
@@ -33,7 +31,7 @@ public static class Permissions
             ),
             [Roles.Tecnico] = new HashSet<string>([View, CollectionCreate], StringComparer.Ordinal),
             [Roles.Qualidade] = new HashSet<string>(
-                [View, StudiesRun, MsaApprove, AuditView],
+                [View, StudiesRun, AuditView],
                 StringComparer.Ordinal
             ),
             [Roles.Leitor] = new HashSet<string>([View], StringComparer.Ordinal),

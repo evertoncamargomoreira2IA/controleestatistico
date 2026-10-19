@@ -20,7 +20,7 @@ try {
     $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
     $login = Request '/Account/Login' $session
     Check 'Página de login responde 200' ($login.StatusCode -eq 200)
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas')) {
         $response = Request $path $session
         Check "Anônimo bloqueado: $path" ($response.StatusCode -eq 302 -and "$($response.Headers.Location)" -match '/Account/Login')
     }
@@ -39,11 +39,15 @@ try {
     } else {
         Check 'Demonstração mantém admin/admin sem troca obrigatória' ($response.StatusCode -eq 200)
     }
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas')) {
         $response = Request $path $session
         Check "Administrador acessa: $path" ($response.StatusCode -eq 200)
     }
     $history = Request '/historico' $session
+    $charts = Request '/cep-cartas' $session
+    Check 'Menu sem módulos retirados' ($charts.Content -notmatch 'Gage R|Kappa')
+    $settingsPage = Request '/definicoes' $session
+    Check 'Definições sem módulos retirados' ($settingsPage.Content -notmatch 'Gage R|Kappa|Validade do MSA')
     Check 'Histórico mostra autenticação' ($history.Content -match 'login.success')
 } finally {
     $results | ConvertTo-Json | Set-Content artifacts/http-smoke.json -Encoding utf8

@@ -36,19 +36,11 @@ public static class DbSeeder
                     ["capability.cpk"] = QualitySettings.Defaults.Cpk,
                     ["capability.pp"] = QualitySettings.Defaults.Pp,
                     ["capability.ppk"] = QualitySettings.Defaults.Ppk,
-                    ["gage_rr.study_percent"] = QualitySettings.Defaults.StudyPercent,
-                    ["gage_rr.tolerance_percent"] = QualitySettings.Defaults.TolerancePercent,
-                    ["gage_rr.ndc_min"] = QualitySettings.Defaults.NdcMin,
-                    ["kappa.kappa"] = QualitySettings.Defaults.Kappa,
-                    ["kappa.effectiveness_min"] = QualitySettings.Defaults.EffectivenessMin,
-                    ["kappa.miss_max"] = QualitySettings.Defaults.MissMax,
-                    ["kappa.false_alarm_max"] = QualitySettings.Defaults.FalseAlarmMax,
                     ["chart.outside_3sigma"] = QualitySettings.Defaults.Outside3Sigma,
                     ["chart.same_side"] = QualitySettings.Defaults.SameSide,
                     ["chart.trend"] = QualitySettings.Defaults.Trend,
                     ["chart.spec_proximity"] = QualitySettings.Defaults.SpecProximity,
                     ["frequency.control_limits_days"] = QualitySettings.Defaults.ControlLimitsDays,
-                    ["frequency.msa_validity_days"] = QualitySettings.Defaults.MsaValidityDays,
                 }
             )
                 initial.Values.Add(

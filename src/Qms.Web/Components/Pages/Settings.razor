@@ -30,47 +30,7 @@
 </div>
 </div>}</div>
 </Card>
-<Card Title="Gage R&amp;R">
-<div class="settings-grid">@foreach(var key in new[]{"StudyPercent","TolerancePercent"}){var band=GetPercent(key);<div class="field">
-<label>@(key=="StudyPercent"?"%R&R do estudo":"%R&R da tolerância") · Bom até</label>
-<InputNumber class="form-control" @bind-Value="band.GoodMax"/>
-<label>Ruim acima de</label>
-<InputNumber class="form-control" @bind-Value="band.BadAbove"/>
-<div class="preview">
-<StatusChip Status="@StatusChip.ChipStatus.Ok" Text="@($"Bom ≤ {N(band.GoodMax)}%")"/>
-<StatusChip Status="@StatusChip.ChipStatus.Warn" Text="Atenção"/>
-<StatusChip Status="@StatusChip.ChipStatus.Bad" Text="@($"Ruim > {N(band.BadAbove)}%")"/>
-</div>
-</div>}<div class="field">
-<label>Ndc mínimo</label>
-<InputNumber class="form-control" @bind-Value="settings.NdcMin"/>
-</div>
-</div>
-</Card>
-<Card Title="Kappa">
-<div class="settings-grid">
-<div class="field">
-<label>Kappa · Ruim abaixo de</label>
-<InputNumber class="form-control" @bind-Value="settings.Kappa.BadBelow"/>
-<label>Bom a partir de</label>
-<InputNumber class="form-control" @bind-Value="settings.Kappa.GoodFrom"/>
-<div class="preview">
-<StatusChip Status="@StatusChip.ChipStatus.Bad" Text="Ruim"/>
-<StatusChip Status="@StatusChip.ChipStatus.Warn" Text="Atenção"/>
-<StatusChip Status="@StatusChip.ChipStatus.Ok" Text="Bom"/>
-</div>
-</div>
-<div class="field">
-<label>Efetividade mínima (%)</label>
-<InputNumber class="form-control" @bind-Value="settings.EffectivenessMin"/>
-<label>Deixar passar máx. (%)</label>
-<InputNumber class="form-control" @bind-Value="settings.MissMax"/>
-<label>Alarme falso máx. (%)</label>
-<InputNumber class="form-control" @bind-Value="settings.FalseAlarmMax"/>
-</div>
-</div>
-</Card>
-<Card Title="Regras de carta">
+<Card Title="Regras de carta"><p>Estas definições gerais serão integradas ao CEP operacional. A análise 25 × 3 usa o método fixo e as regras exibidas na página Cartas CEP.</p>
 <div class="settings-grid">
 <label>
 <InputCheckbox @bind-Value="settings.Outside3Sigma"/> Fora de 3σ</label>
@@ -97,10 +57,7 @@
 <label>Recálculo dos limites (dias)</label>
 <InputNumber class="form-control" @bind-Value="settings.ControlLimitsDays"/>
 </div>
-<div class="field">
-<label>Validade do MSA (dias)</label>
-<InputNumber class="form-control" @bind-Value="settings.MsaValidityDays"/>
-</div>
+
 </div>
 </Card>
 @if(canSave){<div class="field">

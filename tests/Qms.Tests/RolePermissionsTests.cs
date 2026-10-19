@@ -25,7 +25,7 @@ public sealed class RolePermissionsTests
             )
         );
         Assert.True(
-            new HashSet<string> { "view", "studies.run", "msa.approve", "audit.view" }.SetEquals(
+            new HashSet<string> { "view", "studies.run", "audit.view" }.SetEquals(
                 Permissions.RolePermissions[Roles.Qualidade]
             )
         );

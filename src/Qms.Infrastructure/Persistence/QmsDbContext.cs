@@ -15,6 +15,7 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<CepDataset> CepDatasets => Set<CepDataset>();
     public DbSet<CepSample> CepSamples => Set<CepSample>();
+    public DbSet<CepAnalysis> CepAnalyses => Set<CepAnalysis>();
     public DbSet<Subgroup> Subgroups => Set<Subgroup>();
     public DbSet<Measurement> Measurements => Set<Measurement>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
@@ -45,6 +46,8 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
 
     private void EnsureAuditLogsAreAppendOnly()
     {
+        if (ChangeTracker.Entries<CepAnalysis>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Análises CEP salvas são somente para inclusão.");
         if (
             ChangeTracker
                 .Entries<AuditLog>()
@@ -74,6 +77,17 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<CepAnalysis>(e =>
+        {
+            e.ToTable("cep_analyses");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Method).HasMaxLength(80).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(450).IsRequired();
+            e.Property(x => x.InputJson).IsRequired();
+            e.Property(x => x.ResultJson).IsRequired();
+            e.HasIndex(x => new { x.DatasetId, x.DatasetVersion, x.Method }).IsUnique();
+            e.HasOne<CepDataset>().WithMany().HasForeignKey(x => x.DatasetId).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<ApplicationUser>(user =>
             user.Property(x => x.FullName).HasMaxLength(200).IsRequired()
         );

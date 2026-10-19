@@ -1,0 +1,13 @@
+.cep-chart-card{background:#fff;border:1px solid #d8dce1;border-radius:4px;margin:20px 0;padding:24px;color:#3c4858;box-shadow:0 1px 3px #0001}
+.cep-chart-card h2{font-size:18px;text-align:center;font-weight:500;margin:6px 0 22px;color:#3c4858}
+.cep-chart-card p{font-size:13px;color:#586575;margin:16px 0 0}
+.cep-chart-layout{display:grid;grid-template-columns:minmax(0,4fr) minmax(120px,1fr);gap:20px}
+.cep-chart-main,.cep-chart-dist{position:relative;height:340px;min-width:0}
+.cep-chart-range{height:260px;position:relative}
+.cep-chart-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-top:20px}
+.cep-chart-legend span{border-top:2px solid #666;padding-top:5px}
+.cep-chart-legend .legend-mean{border-color:#1414fa}.cep-chart-legend .legend-control{border-color:#ff3030;border-top-style:dashed}.cep-chart-legend .legend-spec{border-color:#ff3030}.cep-chart-legend .legend-center{border-top-style:dashed;border-color:#888}
+.cep-rule-row{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:8px 0;border:1px solid var(--line);border-radius:5px}
+.cep-rule-row strong{min-width:120px}.cep-rule-row span{flex:1}.cep-rule-row b{color:var(--brand-2)}
+.cep-analysis-status{font-size:18px;font-weight:600}
+@media(max-width:650px){.cep-chart-card{padding:14px 10px}.cep-chart-layout{gap:8px;grid-template-columns:minmax(0,3fr) minmax(85px,1fr)}.cep-chart-main,.cep-chart-dist{height:280px}.cep-rule-row{flex-wrap:wrap}.cep-rule-row span{flex-basis:100%}}
