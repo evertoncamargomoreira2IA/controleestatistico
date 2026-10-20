@@ -678,7 +678,7 @@ progress { width: min(100%, 280px); height: 12px; accent-color: #20c9d6; }
 .cep-row-complete td:first-child { border-left: 3px solid #2ab99a; }
 .cep-save-bar { margin-top: 20px; align-items: center; gap: 16px; flex-wrap: wrap; }
 .cep-source-table { max-height: 360px; overflow: auto; margin: 14px 0; }
-.cep-json { max-height: 300px; max-width: 700px; overflow: auto; font-size: .78rem; white-space: pre-wrap; }
+.cep-json { max-height: 300px; max-width: 700px; overflow: auto; overflow-wrap: anywhere; font-size: .78rem; white-space: pre-wrap; }
 .card details > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
 .card details label { margin-top: 8px; }
 @media (max-width: 850px) { .cep-summary { grid-template-columns: 1fr; } }

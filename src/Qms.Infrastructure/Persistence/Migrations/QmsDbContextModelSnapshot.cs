@@ -323,6 +323,244 @@ namespace Qms.Infrastructure.Persistence.Migrations
                     b.ToTable("cep_datasets", (string)null);
                 });
 
+            modelBuilder.Entity("Qms.Domain.Collection.CepLimitApproval", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ApprovedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CharacteristicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CharacteristicRevision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponsibleId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceAnalysisId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceAnalysisId")
+                        .IsUnique();
+
+                    b.ToTable("cep_limit_approvals", (string)null);
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepLimitRevocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ApprovalId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("At")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalId")
+                        .IsUnique();
+
+                    b.ToTable("cep_limit_revocations", (string)null);
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepOccurrence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnalysisId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Cause")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ClosedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DueAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResponsibleId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Verification")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId")
+                        .IsUnique();
+
+                    b.ToTable("cep_occurrences", (string)null);
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Cancelled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CharacteristicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CharacteristicName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CharacteristicRevision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Day")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DueAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProcessPath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponsibleId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TargetSets")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CharacteristicId");
+
+                    b.HasIndex("Day");
+
+                    b.ToTable("cep_plans", (string)null);
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepPlanDataset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DatasetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LinkedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LinkedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatasetId")
+                        .IsUnique();
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("cep_plan_datasets", (string)null);
+                });
+
             modelBuilder.Entity("Qms.Domain.Collection.CepSample", b =>
                 {
                     b.Property<int>("Id")
@@ -1012,6 +1250,57 @@ namespace Qms.Infrastructure.Persistence.Migrations
                     b.HasOne("Qms.Domain.MasterData.Characteristic", null)
                         .WithMany()
                         .HasForeignKey("CharacteristicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepLimitApproval", b =>
+                {
+                    b.HasOne("Qms.Domain.Collection.CepAnalysis", null)
+                        .WithMany()
+                        .HasForeignKey("SourceAnalysisId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepLimitRevocation", b =>
+                {
+                    b.HasOne("Qms.Domain.Collection.CepLimitApproval", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepOccurrence", b =>
+                {
+                    b.HasOne("Qms.Domain.Collection.CepAnalysis", null)
+                        .WithMany()
+                        .HasForeignKey("AnalysisId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepPlan", b =>
+                {
+                    b.HasOne("Qms.Domain.MasterData.Characteristic", null)
+                        .WithMany()
+                        .HasForeignKey("CharacteristicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CepPlanDataset", b =>
+                {
+                    b.HasOne("Qms.Domain.Collection.CepDataset", null)
+                        .WithMany()
+                        .HasForeignKey("DatasetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Domain.Collection.CepPlan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

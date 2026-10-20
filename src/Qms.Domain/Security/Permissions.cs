@@ -9,6 +9,9 @@ public static class Permissions
     public const string CollectionCreate = "collection.create";
     public const string StudiesRun = "studies.run";
     public const string AuditView = "audit.view";
+    public const string CepPlanManage = "cep.plan.manage";
+    public const string CepLimitsApprove = "cep.limits.approve";
+    public const string CepActionsManage = "cep.actions.manage";
 
     public static IReadOnlyList<string> All { get; } =
     [
@@ -19,6 +22,9 @@ public static class Permissions
         CollectionCreate,
         StudiesRun,
         AuditView,
+        CepPlanManage,
+        CepLimitsApprove,
+        CepActionsManage,
     ];
 
     public static IReadOnlyDictionary<string, IReadOnlySet<string>> RolePermissions { get; } =
@@ -26,12 +32,12 @@ public static class Permissions
         {
             [Roles.Admin] = new HashSet<string>(All, StringComparer.Ordinal),
             [Roles.Engenheiro] = new HashSet<string>(
-                [View, CollectionCreate, StudiesRun, MasterdataManage],
+                [View, CollectionCreate, StudiesRun, MasterdataManage, CepPlanManage, CepActionsManage],
                 StringComparer.Ordinal
             ),
-            [Roles.Tecnico] = new HashSet<string>([View, CollectionCreate], StringComparer.Ordinal),
+            [Roles.Tecnico] = new HashSet<string>([View, CollectionCreate, CepActionsManage], StringComparer.Ordinal),
             [Roles.Qualidade] = new HashSet<string>(
-                [View, StudiesRun, AuditView],
+                [View, StudiesRun, AuditView, CepPlanManage, CepLimitsApprove, CepActionsManage],
                 StringComparer.Ordinal
             ),
             [Roles.Leitor] = new HashSet<string>([View], StringComparer.Ordinal),

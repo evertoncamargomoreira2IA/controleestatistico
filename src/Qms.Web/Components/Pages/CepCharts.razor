@@ -12,6 +12,7 @@
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
 @inject NavigationManager Navigation
 @inject IServiceScopeFactory Scopes
+@inject ICepOperationsService Operations
 
 <PageTitle>Cartas CEP · QMS</PageTitle>
 <PageHeader Title="Cartas CEP" Breadcrumb="Operação / Análises X̄-R" />
@@ -23,9 +24,10 @@
 <label class="field">Data de criação<input type="date" class="form-control" @bind="day" /></label>
 <button class="btn ghost" disabled="@busy" @onclick="FindAsync">Buscar conjuntos</button>
 <label class="field">Conjunto<select class="form-control" @bind="selected"><option value="0">Selecione...</option>@foreach(var d in candidates){<option value="@d.Id">#@d.Id · @d.Title · @d.CharacteristicName</option>}</select></label>
+<label class="field">Origem dos limites<select class="form-control" @bind="approvedId"><option value="0">Estimados deste conjunto</option>@foreach(var a in approvals){<option value="@a.Id">Aprovação #@a.Id · característica #@a.CharacteristicId · revisão @a.CharacteristicRevision</option>}</select></label>
 @if (canRun) { <button class="btn" disabled="@(busy || selected == 0)" @onclick="RunAsync">Analisar e salvar</button> }
 </div>
-<p>O resultado é salvo com as leituras, a revisão e a versão do método. Reanalisar a mesma versão abre o registro existente. Limites estimados deste conjunto; aprovação e limites fixos de acompanhamento pertencem à etapa operacional.</p>
+<p>O resultado preserva leituras, revisão, regras e origem dos limites. Reanalisar com a mesma versão das regras e a mesma aprovação abre o registro existente. Limites aprovados exigem a mesma característica e revisão e leituras durante a vigência. <a href="/cep-operacao">Consultar aprovações e ocorrências</a>.</p>
 @if (!canRun) { <p>Seu perfil permite consultar análises salvas. Engenharia, Qualidade ou Administração executam novas análises.</p> }
 @if (candidates.Count == 0) { <p>Nenhum conjunto concluído nesta data. <a href="/cep-dia">Consultar o progresso da coleta</a>.</p> }
 </section>
@@ -33,6 +35,7 @@
 {
 <section class="card"><h2>#@record.Id · @snapshot.Title</h2><p>@snapshot.ProcessPath / @snapshot.CharacteristicName · @snapshot.Unit</p>
 <p>Conjunto #@record.DatasetId · versão @record.DatasetVersion · revisão @snapshot.CharacteristicRevision · @record.Method · salvo em @LocalTime.Format(record.CreatedAt) por @Author(record.CreatedBy)</p>
+<p>Limites: @(result.ApprovedLimitId.HasValue?$"aprovados, registro #{result.ApprovedLimitId}":"estimados deste conjunto"). Linha central X̄ @N(result.ControlCenter??result.Mean) · R @N(result.RangeCenter??result.AverageRange). Regras: @(result.Rules is null?"método fixo da Sprint 2":$"versão {result.Rules.SettingsVersion} das definições, preservada nesta análise").</p>
 <a href="@($"/cep-coleta?id={record.DatasetId}")">Consultar leituras e histórico da coleta</a>
 <p class="cep-analysis-status">@(result.ZeroRange ? "Variação intramostra nula — investigar resolução e coleta." : result.Signals.Count == 0 ? "Sem sinais nas regras avaliadas" : $"{result.Signals.Count} sinais de controle ou tendência — investigar")</p>
 <p>Sem sinais não comprova estabilidade. Especificação e controle estatístico são avaliações distintas.</p></section>
@@ -43,6 +46,7 @@
 <div class="cep-rule-row"><strong>7 crescentes</strong><span>Sete médias estritamente crescentes, todas acima do nominal</span><b>@RuleStatus("seven-up")</b></div>
 <div class="cep-rule-row"><strong>7 decrescentes</strong><span>Sete médias estritamente decrescentes, todas abaixo do nominal</span><b>@RuleStatus("seven-down")</b></div>
 <p>Empates e valores iguais ao nominal interrompem a sequência. Janelas sobrepostas são listadas separadamente.</p>
+@if(result.Rules is not null){<p>Regras adicionais: fora dos limites @(result.Rules.Outside?"ativa":"inativa"); mesmo lado @(result.Rules.SameSideEnabled?$"N={result.Rules.SameSideN}":"inativa"); tendência @(result.Rules.TrendEnabled?$"N={result.Rules.TrendN}":"inativa"); proximidade @(result.Rules.ProximityEnabled?$"{result.Rules.ProximityPercent}% da meia faixa bilateral":"inativa"). As duas regras de sete pontos continuam fixas. Proximidade sem especificação bilateral não é avaliada.</p>}
 <p>Fora da especificação: <strong>@result.IndividualOutsideSpec / 75 leituras</strong> e <strong>@result.MeansOutsideSpec / 25 médias</strong>. @(result.Lsl is null && result.Usl is null ? "Sem limites de especificação cadastrados; contagem não aplicável." : "São avaliados somente os limites cadastrados.")</p>
 @if (result.Signals.Count > 0) { <div class="table-wrap"><table><thead><tr><th>Carta</th><th>Amostras</th><th>Sinal</th></tr></thead><tbody>@foreach(var signal in result.Signals){<tr><td>@signal.Chart</td><td>@signal.From–@signal.To</td><td>@signal.Description</td></tr>}</tbody></table></div> }
 <details><summary>Valores e limites para conferência</summary><p>X̄̄ @N(result.Mean) · R̄ @N(result.AverageRange) · A₂ 1,023 · D₃ 0 · D₄ 2,574</p><p>X̄: LIC @N(result.XLower) · LSC @N(result.XUpper). R: LIC @N(result.RLower) · LSC @N(result.RUpper).</p><div class="table-wrap"><table><thead><tr><th>Amostra</th><th>Média</th><th>Amplitude</th></tr></thead><tbody>@foreach(var p in result.Points){<tr><td>@p.Position</td><td>@N(p.Mean)</td><td>@N(p.Range)</td></tr>}</tbody></table></div></details>
@@ -64,6 +68,8 @@
     private IReadOnlyList<CepDataset> candidates = [];
     private IReadOnlyList<CepAnalysis> history = [];
     private int selected;
+    private int approvedId;
+    private IReadOnlyList<CepLimitApproval> approvals=[];
     private bool busy, canRun;
     private string? error;
     private string filter = "";
@@ -76,6 +82,8 @@
         error = null; record = null; result = null; snapshot = null;
         try {
             user = (await Auth.GetAuthenticationStateAsync()).User;
+            var operationBoard=await Operations.BoardAsync(LocalTime.ToLocal(DateTimeOffset.UtcNow).ToString("yyyy-MM-dd"),user);
+            approvals=operationBoard.Approvals.Where(x=>x.ExpiresAt>=DateTimeOffset.UtcNow && !operationBoard.RevokedApprovalIds.Contains(x.Id)).ToArray();
             canRun = Roles.All.Any(r => user.IsInRole(r) && Permissions.Allows(r, Permissions.StudiesRun));
             if (DatasetId.HasValue) { var d = await Datasets.GetAsync(DatasetId.Value, user); day = LocalTime.ToLocal(d.CreatedAt).Date; selected = d.Id; }
             await FindAsync(); history = await Analyses.ListAsync(null, user);
@@ -89,11 +97,11 @@
     private async Task FindAsync() { candidates = (await Datasets.DailyAsync(DateOnly.FromDateTime(day), user)).Datasets.Where(x => x.CompletedAt.HasValue).ToArray(); if(!candidates.Any(x => x.Id == selected)) selected = 0; }
     private async Task RunAsync() {
         if(busy) return; busy = true; error = null;
-        try { var saved = await Analyses.RunAsync(selected, user); Navigation.NavigateTo($"/cep-cartas?analysisId={saved.Id}"); }
+        try { var saved = await Analyses.RunAsync(selected, user,approvedId==0?null:approvedId,true); Navigation.NavigateTo($"/cep-cartas?analysisId={saved.Id}"); }
         catch(Exception ex) when(ex is ArgumentException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException) { error = ex is Microsoft.EntityFrameworkCore.DbUpdateException ? "Outra análise pode ter sido salva simultaneamente. Consulte o histórico e tente novamente." : ex.Message; }
         finally { busy = false; }
     }
-    private void Show(CepAnalysis value) { record=value; result=JsonSerializer.Deserialize<CepResult>(value.ResultJson); snapshot=JsonSerializer.Deserialize<CepDataset>(value.InputJson); selected=value.DatasetId; }
+    private void Show(CepAnalysis value) { record=value; result=JsonSerializer.Deserialize<CepResult>(value.ResultJson); snapshot=JsonSerializer.Deserialize<CepDataset>(value.InputJson); selected=value.DatasetId; approvedId=result?.ApprovedLimitId??0; }
     private bool Matches(CepAnalysis row) => string.IsNullOrWhiteSpace(filter) || $"{row.DatasetId} {row.InputJson}".Contains(filter, StringComparison.OrdinalIgnoreCase);
     private string Author(string id) => authors.GetValueOrDefault(id,id);
     private string RuleStatus(string code) => result?.Nominal is null ? "Não avaliada: sem nominal" : result.Signals.Any(x => x.Code == code) ? "Sinal" : "Sem sinal";

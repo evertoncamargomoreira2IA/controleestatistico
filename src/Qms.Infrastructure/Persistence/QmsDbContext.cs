@@ -16,6 +16,11 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
     public DbSet<CepDataset> CepDatasets => Set<CepDataset>();
     public DbSet<CepSample> CepSamples => Set<CepSample>();
     public DbSet<CepAnalysis> CepAnalyses => Set<CepAnalysis>();
+    public DbSet<CepPlan> CepPlans => Set<CepPlan>();
+    public DbSet<CepPlanDataset> CepPlanDatasets => Set<CepPlanDataset>();
+    public DbSet<CepLimitApproval> CepLimitApprovals => Set<CepLimitApproval>();
+    public DbSet<CepLimitRevocation> CepLimitRevocations => Set<CepLimitRevocation>();
+    public DbSet<CepOccurrence> CepOccurrences => Set<CepOccurrence>();
     public DbSet<Subgroup> Subgroups => Set<Subgroup>();
     public DbSet<Measurement> Measurements => Set<Measurement>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
@@ -46,6 +51,9 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
 
     private void EnsureAuditLogsAreAppendOnly()
     {
+        if (ChangeTracker.Entries().Any(x => x.Entity is CepLimitApproval or CepLimitRevocation or CepPlanDataset
+            && x.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Vínculos e decisões de limites preservam o registro original.");
         if (ChangeTracker.Entries<CepAnalysis>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Análises CEP salvas são somente para inclusão.");
         if (
@@ -77,6 +85,7 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        CepOperationsMapping.Configure(builder);
         builder.Entity<CepAnalysis>(e =>
         {
             e.ToTable("cep_analyses");

@@ -17,15 +17,17 @@ public sealed class RolePermissionsTests
                 "collection.create",
                 "studies.run",
                 "masterdata.manage",
+                "cep.plan.manage",
+                "cep.actions.manage",
             }.SetEquals(Permissions.RolePermissions[Roles.Engenheiro])
         );
         Assert.True(
-            new HashSet<string> { "view", "collection.create" }.SetEquals(
+            new HashSet<string> { "view", "collection.create", "cep.actions.manage" }.SetEquals(
                 Permissions.RolePermissions[Roles.Tecnico]
             )
         );
         Assert.True(
-            new HashSet<string> { "view", "studies.run", "audit.view" }.SetEquals(
+            new HashSet<string> { "view", "studies.run", "audit.view", "cep.plan.manage", "cep.limits.approve", "cep.actions.manage" }.SetEquals(
                 Permissions.RolePermissions[Roles.Qualidade]
             )
         );

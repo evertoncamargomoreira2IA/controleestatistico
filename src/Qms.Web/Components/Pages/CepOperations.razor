@@ -1,0 +1,88 @@
+@page "/cep-operacao"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "perm:view")]
+@using Qms.Application.Collection
+@using Qms.Domain.Collection
+@using Qms.Domain.Security
+@using System.Security.Claims
+@inject ICepOperationsService Service
+@inject ICepDatasetService Datasets
+@inject Qms.Application.Settings.ISettingsService SettingsService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
+
+<PageTitle>CEP operacional · QMS</PageTitle>
+<PageHeader Title="CEP operacional" Breadcrumb="Operação / Programação e investigação" />
+<p>Meta em conjuntos CEP de 25 amostras × três leituras. A coleta, a análise e o tratamento das ocorrências têm situações próprias.</p>
+@if(error is not null){<div class="alert alert-bad" role="alert">@error</div>}
+@if(message is not null){<div class="alert alert-ok" role="status">@message</div>}
+<div class="collection-toolbar cep-daily-toolbar"><label class="field">Data planejada<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="Reload">Consultar programação</button><label class="field">Filtrar processo, título ou responsável<input class="form-control" @bind="filter" @bind:event="oninput" /></label><a class="btn ghost" href="/cep-dia">Histórico da coleta</a><a class="btn ghost" href="/cep-cartas">Cartas e análises</a></div>
+@if(board is not null){
+<section class="grid kpis">
+<KpiCard Label="Meta do dia" Value="@Target.ToString()" Hint="Conjuntos de programações não canceladas" />
+<KpiCard Label="Coletas completas" Value="@Complete.ToString()" Hint="Conjuntos válidos vinculados à programação" />
+<KpiCard Label="Análises realizadas" Value="@Visible.Where(x=>!x.Plan.Cancelled).Sum(x=>x.Analyzed).ToString()" Hint="Conjuntos analisados; não é aprovação" />
+<KpiCard Label="Cumprimento da coleta" Value="@(Target==0?"—":$"{Math.Min(100,Complete*100/Target)}%")" Hint="@(Target==0?"Sem meta definida":"Separado do progresso das 75 leituras")" />
+</section>
+<section class="card"><h2>Programação diária</h2>
+@if(canPlan){<details><summary>Nova programação</summary><div class="collection-fields">
+<label class="field">Característica<select class="form-control" @bind="characteristicId"><option value="0">Selecione...</option>@foreach(var c in choices){<option value="@c.Characteristic.Id">@c.ProcessPath / @c.Characteristic.Name</option>}</select></label>
+<label class="field">Título<input class="form-control" @bind="title" @bind:event="oninput" maxlength="120" /></label>
+<label class="field">Turno<select class="form-control" @bind="shift"><option>T1</option><option>T2</option><option>T3</option></select></label>
+<label class="field">Responsável<select class="form-control" @bind="responsible"><option value="">Selecione...</option>@foreach(var o in board.Operators){<option value="@o.Id">@o.Name</option>}</select></label>
+<label class="field">Meta de conjuntos<input class="form-control" type="number" min="1" max="100" @bind="target" /></label>
+<label class="field">Prazo local de São Paulo<input class="form-control" type="datetime-local" @bind="due" /></label>
+</div><button class="btn" disabled="@busy" @onclick="CreatePlan">Salvar programação para @day.ToString("dd/MM/yyyy")</button></details>}
+<div class="table-wrap"><table><thead><tr><th>Programação e processo</th><th>Responsável e prazo</th><th>Meta e execução</th><th>Situação</th><th>Coletas e histórico</th></tr></thead><tbody>
+@foreach(var p in Visible){<tr><td><strong>#@p.Plan.Id · @p.Plan.Title</strong><br />@p.Plan.ProcessPath / @p.Plan.CharacteristicName<br />Revisão @p.Plan.CharacteristicRevision · @p.Plan.Shift</td><td>@Name(p.Plan.ResponsibleId)<br />@LocalTime.Format(p.Plan.DueAt)</td><td>@p.Complete / @p.Plan.TargetSets coletas<br />@p.Analyzed análises · @p.OpenOccurrences ocorrências abertas<br /><progress max="100" value="@p.CollectionPercent" aria-label="Cumprimento da coleta da programação @p.Plan.Id"></progress></td><td><span class="status-chip">@p.Status</span></td><td>@foreach(var id in p.DatasetIds){<a href="@($"/cep-coleta?id={id}")">Coleta #@id</a><br />}<button class="btn ghost" @onclick="()=>PlanHistory(p.Plan.Id)">Histórico #@p.Plan.Id</button></td></tr>}
+@if(Visible.Count==0){<tr><td colspan="5">Sem programação nesta data e filtro. Sem meta definida.</td></tr>}
+</tbody></table></div>
+@if(canCollect){<details><summary>Vincular uma coleta à programação</summary><p>Use o ID do conjunto existente. Ele deve ter a mesma característica, revisão e turno. Cada conjunto conta em apenas uma programação; o vínculo fica no histórico.</p><div class="collection-fields"><label class="field">Programação<select class="form-control" @bind="linkPlanId"><option value="0">Selecione...</option>@foreach(var p in board.Plans.Where(x=>!x.Plan.Cancelled)){<option value="@p.Plan.Id">#@p.Plan.Id · @p.Plan.Title</option>}</select></label><label class="field">ID do conjunto<input type="number" class="form-control" @bind="linkDatasetId" /></label></div><a href="/cep-coleta">Criar ou consultar coleta</a> <button class="btn" disabled="@busy" @onclick="Link">Vincular conjunto</button></details>}
+@if(canPlan){<details><summary>Cancelar programação</summary><div class="collection-fields"><label class="field">Programação a cancelar<select class="form-control" @bind="cancelPlanId"><option value="0">Selecione...</option>@foreach(var p in board.Plans.Where(x=>!x.Plan.Cancelled)){<option value="@p.Plan.Id">#@p.Plan.Id · @p.Plan.Title</option>}</select></label><label class="field">Motivo do cancelamento<input class="form-control" @bind="cancelReason" @bind:event="oninput" maxlength="1000" /></label></div><label><input type="checkbox" @bind="confirmCancel" /> Confirmo o cancelamento com preservação dos vínculos e do histórico.</label><button class="btn ghost" disabled="@(busy||!confirmCancel)" @onclick="Cancel">Cancelar programação</button></details>}
+</section>
+<section class="card"><h2>Limites aprovados</h2><p>Qualidade ou Administração aprova uma base com variação positiva, sem sinais, sem leituras fora da especificação e sem investigação aberta. As leituras de acompanhamento devem ser posteriores à aprovação e anteriores ao vencimento. A mesma base não monitora a si própria.</p>
+@if(canApprove){<details><summary>Aprovar limites de uma análise</summary><div class="collection-fields"><label class="field">ID da análise de base<input class="form-control" type="number" @bind="baseAnalysisId" /></label><label class="field">Validade em dias<input class="form-control" type="number" min="1" max="3650" @bind="validityDays" /></label><label class="field">Justificativa técnica<input class="form-control" @bind="approvalReason" @bind:event="oninput" maxlength="1000" /></label></div><button class="btn" disabled="@busy" @onclick="Approve">Aprovar e registrar decisão</button></details>}
+<div class="table-wrap"><table><thead><tr><th>Aprovação</th><th>Característica e base</th><th>Autor e vigência</th><th>Situação e histórico</th></tr></thead><tbody>@foreach(var a in board.Approvals){<tr><td>#@a.Id<br />@a.Reason</td><td>Característica #@a.CharacteristicId · revisão @a.CharacteristicRevision<br /><a href="@($"/cep-cartas?analysisId={a.SourceAnalysisId}")">Análise de base #@a.SourceAnalysisId</a></td><td>@Name(a.ResponsibleId)<br />@LocalTime.Format(a.ApprovedAt) a @LocalTime.Format(a.ExpiresAt)</td><td>@(board.RevokedApprovalIds.Contains(a.Id)?"Revogada":a.ExpiresAt<DateTimeOffset.UtcNow?"Expirada":"Vigente")<br /><button class="btn ghost" @onclick="()=>LimitHistory(a.Id)">Histórico do limite #@a.Id</button></td></tr>}</tbody></table></div>
+@if(canApprove){<details><summary>Revogar limites aprovados</summary><div class="collection-fields"><label class="field">Aprovação a revogar<select class="form-control" @bind="revokeId"><option value="0">Selecione...</option>@foreach(var a in board.Approvals.Where(x=>!board.RevokedApprovalIds.Contains(x.Id))){<option value="@a.Id">#@a.Id · base #@a.SourceAnalysisId</option>}</select></label><label class="field">Motivo da revogação<input class="form-control" @bind="revokeReason" @bind:event="oninput" maxlength="1000" /></label></div><button class="btn ghost" disabled="@busy" @onclick="Revoke">Revogar e preservar histórico</button></details>}
+</section>
+<section class="card"><h2>Ocorrências e ações — todas as datas</h2><p>Sinais, leituras fora da especificação ou variação nula em novas análises operacionais abrem uma investigação por análise, com prazo inicial de 24 horas e responsável pela análise. O prazo pode ser ajustado com registro. Reanalisar não duplica a ocorrência.</p>
+@if(canAct){<details><summary>Abrir investigação manual</summary><div class="collection-fields"><label class="field">ID da análise<input type="number" class="form-control" @bind="occAnalysisId" /></label><label class="field">Descrição<input class="form-control" @bind="occDescription" @bind:event="oninput" maxlength="2000" /></label><label class="field">Responsável pela investigação<select class="form-control" @bind="occResponsible"><option value="">Selecione...</option>@foreach(var o in board.Operators){<option value="@o.Id">@o.Name</option>}</select></label><label class="field">Prazo da investigação<input class="form-control" type="datetime-local" @bind="occDue" /></label></div><button class="btn" disabled="@busy" @onclick="Open">Abrir ocorrência</button></details>}
+<div class="table-wrap"><table><thead><tr><th>Ocorrência</th><th>Responsável e prazo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>@foreach(var o in board.Occurrences){<tr><td>#@o.Id · @o.Description<br /><a href="@($"/cep-cartas?analysisId={o.AnalysisId}")">Análise #@o.AnalysisId</a></td><td>@Name(o.ResponsibleId)<br />@LocalTime.Format(o.DueAt)</td><td>@o.Status @(o.Status!="Encerrada" && o.DueAt<DateTimeOffset.UtcNow?"· Atrasada":"")</td><td>@if(canAct){<button class="btn ghost" @onclick="()=>Edit(o)">Tratar ocorrência #@o.Id</button>}<button class="btn ghost" @onclick="()=>OccurrenceHistory(o.Id)">Histórico da ocorrência #@o.Id</button></td></tr>}</tbody></table></div>
+@if(editing is not null){<h3>Investigação #@editing.Id · versão @editing.Version</h3><div class="collection-fields"><label class="field">Responsável pela ação<select class="form-control" @bind="editResponsible">@foreach(var o in board.Operators){<option value="@o.Id">@o.Name</option>}</select></label><label class="field">Prazo da ação<input class="form-control" type="datetime-local" @bind="editDue" /></label><label class="field">Situação da ação<select class="form-control" @bind="editStatus"><option>Aberta</option><option>Em investigação</option><option>Encerrada</option></select></label></div><label class="field">Causa identificada<textarea class="form-control" @bind="cause" @bind:event="oninput" maxlength="2000"></textarea></label><label class="field">Ação executada<textarea class="form-control" @bind="action" @bind:event="oninput" maxlength="2000"></textarea></label><label class="field">Verificação de eficácia<textarea class="form-control" @bind="verification" @bind:event="oninput" maxlength="2000"></textarea></label><p>Para encerrar, preencha causa, ação e verificação. Reabrir ou alterar mantém todas as versões no histórico.</p><button class="btn" disabled="@busy" @onclick="SaveOccurrence">Salvar investigação</button>}
+</section>
+}
+@if(events is not null){<section class="card"><h2>Histórico @historyTitle</h2><div class="table-wrap"><table><thead><tr><th>Data local e autor</th><th>Evento</th><th>Registro</th></tr></thead><tbody>@foreach(var e in events){<tr><td>@LocalTime.Format(e.At)<br />@e.Actor</td><td>@e.Action</td><td><details><summary>Consultar antes e depois</summary><pre class="cep-json">Antes: @e.Before
+Depois: @e.After</pre></details></td></tr>}</tbody></table></div></section>}
+
+@code {
+    private ClaimsPrincipal user=new();
+    private CepOperationsBoard? board;
+    private IReadOnlyList<CepChoice> choices=[];
+    private IReadOnlyList<CepOperationEvent>? events;
+    private DateTime day=LocalTime.ToLocal(DateTimeOffset.UtcNow).Date;
+    private DateTime due=LocalTime.ToLocal(DateTimeOffset.UtcNow).Date.AddHours(23).AddMinutes(59),occDue=LocalTime.ToLocal(DateTimeOffset.UtcNow).DateTime.AddDays(1),editDue;
+    private string filter="",title="",shift="T1",responsible="",cancelReason="",approvalReason="",revokeReason="",occDescription="",occResponsible="",cause="",action="",verification="",editResponsible="",editStatus="Aberta",historyTitle="";
+    private string? error,message;
+    private bool busy,canPlan,canCollect,canApprove,canAct,confirmCancel;
+    private int characteristicId,target=1,linkPlanId,linkDatasetId,cancelPlanId,baseAnalysisId,validityDays=180,revokeId,occAnalysisId;
+    private CepOccurrence? editing;
+    private List<CepPlanProgress> Visible=>board?.Plans.Where(x=>string.IsNullOrWhiteSpace(filter)||$"{x.Plan.Title} {x.Plan.ProcessPath} {x.Plan.CharacteristicName} {Name(x.Plan.ResponsibleId)}".Contains(filter,StringComparison.OrdinalIgnoreCase)).ToList()??[];
+    private int Target=>Visible.Where(x=>!x.Plan.Cancelled).Sum(x=>x.Plan.TargetSets);
+    private int Complete=>Visible.Where(x=>!x.Plan.Cancelled).Sum(x=>x.Complete);
+    private bool Allows(string permission)=>Roles.All.Any(r=>user.IsInRole(r)&&Permissions.Allows(r,permission));
+    protected override async Task OnInitializedAsync(){user=(await Auth.GetAuthenticationStateAsync()).User;canPlan=Allows(Permissions.CepPlanManage);canCollect=Allows(Permissions.CollectionCreate);canApprove=Allows(Permissions.CepLimitsApprove);canAct=Allows(Permissions.CepActionsManage);choices=await Datasets.ChoicesAsync(user);validityDays=(await SettingsService.GetActiveAsync()).ControlLimitsDays;await Reload();}
+    private string Name(string id)=>board?.Operators.FirstOrDefault(x=>x.Id==id)?.Name??id;
+    private async Task Reload()=>await Execute(async()=>{board=await Service.BoardAsync(day.ToString("yyyy-MM-dd"),user);},false);
+    private async Task Execute(Func<Task> work,bool reload=true){if(busy)return;busy=true;error=null;message=null;try{await work();if(reload){board=await Service.BoardAsync(day.ToString("yyyy-MM-dd"),user);message="Operação registrada com histórico.";}}catch(Exception ex)when(ex is ArgumentException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException){error=ex is Microsoft.EntityFrameworkCore.DbUpdateException?"Registro alterado simultaneamente ou já existente. Consulte novamente antes de tentar." : ex.Message;}finally{busy=false;}}
+    private Task CreatePlan()=>Execute(async()=>{await Service.PlanAsync(new(characteristicId,day.ToString("yyyy-MM-dd"),shift,title,responsible,target,LocalTime.ParseLocal(due.ToString("yyyy-MM-ddTHH:mm"))),user);title="";});
+    private Task Link()=>Execute(async()=>{var p=board!.Plans.FirstOrDefault(x=>x.Plan.Id==linkPlanId)?.Plan??throw new ArgumentException("Selecione a programação.");await Service.LinkAsync(p.Id,linkDatasetId,p.Version,user);});
+    private Task Cancel()=>Execute(async()=>{if(!confirmCancel)throw new ArgumentException("Confirme o cancelamento.");var p=board!.Plans.FirstOrDefault(x=>x.Plan.Id==cancelPlanId)?.Plan??throw new ArgumentException("Selecione a programação.");await Service.CancelAsync(p.Id,p.Version,cancelReason,user);confirmCancel=false;});
+    private Task Approve()=>Execute(async()=>{await Service.ApproveAsync(baseAnalysisId,validityDays,approvalReason,user);});
+    private Task Revoke()=>Execute(()=>Service.RevokeAsync(revokeId,revokeReason,user));
+    private Task Open()=>Execute(async()=>{await Service.OpenAsync(occAnalysisId,occDescription,occResponsible,LocalTime.ParseLocal(occDue.ToString("yyyy-MM-ddTHH:mm")),user);});
+    private void Edit(CepOccurrence o){editing=o;editResponsible=o.ResponsibleId;editStatus=o.Status;editDue=LocalTime.ToLocal(o.DueAt).DateTime;cause=o.Cause;action=o.Action;verification=o.Verification;}
+    private Task SaveOccurrence()=>Execute(async()=>{await Service.UpdateAsync(new(editing!.Id,editing.Version,editResponsible,LocalTime.ParseLocal(editDue.ToString("yyyy-MM-ddTHH:mm")),editStatus,cause,action,verification),user);editing=null;});
+    private Task History(string entity,int id)=>Execute(async()=>{events=await Service.HistoryAsync(entity,id,user);historyTitle=$"{(entity=="cep_plan"?"da programação":entity=="cep_limit"?"dos limites":"da ocorrência")} #{id}";},false);
+    private Task PlanHistory(int id)=>History("cep_plan",id);
+    private Task LimitHistory(int id)=>History("cep_limit",id);
+    private Task OccurrenceHistory(int id)=>History("cep_occurrence",id);
+}

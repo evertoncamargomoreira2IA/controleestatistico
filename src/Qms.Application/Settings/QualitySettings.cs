@@ -38,8 +38,8 @@ public sealed record QualitySettings(
         foreach (var (name, band) in new[] { ("CP", Cp), ("CPK", Cpk), ("PP", Pp), ("PPK", Ppk) })
             if (band.BadBelow >= band.GoodFrom)
                 return $"Em {name}, o limite ruim deve ser menor que o bom.";
-        if (SameSide.N < 2 || Trend.N < 2)
-            return "Os valores inteiros devem respeitar o mínimo permitido.";
+        if (SameSide.N is <2 or >25 || Trend.N is <2 or >25)
+            return "Regras de sequência devem usar N entre 2 e 25.";
         if (new[] { SpecProximity.Percent }.Any(x => x is < 0 or > 100))
             return "Percentuais devem estar entre 0 e 100.";
         if (ControlLimitsDays < 1)

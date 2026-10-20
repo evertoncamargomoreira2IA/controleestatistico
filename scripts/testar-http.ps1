@@ -20,7 +20,7 @@ try {
     $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
     $login = Request '/Account/Login' $session
     Check 'Página de login responde 200' ($login.StatusCode -eq 200)
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao')) {
         $response = Request $path $session
         Check "Anônimo bloqueado: $path" ($response.StatusCode -eq 302 -and "$($response.Headers.Location)" -match '/Account/Login')
     }
@@ -39,7 +39,7 @@ try {
     } else {
         Check 'Demonstração mantém admin/admin sem troca obrigatória' ($response.StatusCode -eq 200)
     }
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao')) {
         $response = Request $path $session
         Check "Administrador acessa: $path" ($response.StatusCode -eq 200)
     }
@@ -49,6 +49,10 @@ try {
     $settingsPage = Request '/definicoes' $session
     Check 'Definições sem módulos retirados' ($settingsPage.Content -notmatch 'Gage R|Kappa|Validade do MSA')
     Check 'Histórico mostra autenticação' ($history.Content -match 'login.success')
+    $operationsPage = Request '/cep-operacao' $session
+    Check 'CEP operacional renderiza' ($operationsPage.Content -match 'CEP operacional')
+    Check 'Formulário de metas disponível' ($operationsPage.Content -match 'Meta de conjuntos')
+    Check 'Aprovação de limites disponível ao administrador' ($operationsPage.Content -match 'Aprovar e registrar')
 } finally {
     $results | ConvertTo-Json | Set-Content artifacts/http-smoke.json -Encoding utf8
     $results | Format-Table -AutoSize

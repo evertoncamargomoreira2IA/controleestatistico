@@ -12,7 +12,7 @@ using Qms.Infrastructure.Persistence;
 
 namespace Qms.Tests;
 
-public sealed class CepDatasetTests : IDisposable
+public sealed partial class CepDatasetTests : IDisposable
 {
     private readonly SqliteConnection connection;
     private readonly ServiceProvider services;

@@ -2,7 +2,7 @@
 
 Sistema web de qualidade para servidor corporativo, com .NET 10, Blazor Interactive Server, Entity Framework Core e SQLite no desenvolvimento. SQL Server e homologação no servidor permanecem no roteiro.
 
-## Estado atual — Sprint 2
+## Estado atual — Sprint 3 em validação
 
 - Login, perfis, cadastros, instrumentos, definições, coleta e importação CSV/XLSX.
 - Conjuntos CEP de **25 amostras × 3 leituras**, com digitação, colagem do Excel ou seleção explícita de amostras da base.
@@ -12,6 +12,9 @@ Sistema web de qualidade para servidor corporativo, com .NET 10, Blazor Interact
 - Cartas X̄-R, distribuição lateral das 25 médias, limites estimados, regras de sete pontos e contagens fora da especificação.
 - Análises salvas com entrada, resultados, autor, método e revisão; reabertura sem sobrescrever ou duplicar a mesma versão.
 - Escopo vigente: CEP e Cp/Cpk. Kappa e Gage R&R retirados dos menus, definições, classificações e permissões; registros antigos preservados.
+- CEP operacional: programação por data, característica, turno, responsável, meta e prazo; vínculo explícito de conjuntos e consulta de andamento.
+- Aprovação e revogação de limites por Qualidade/Administração; novas análises preservam regras e limites usados. Ocorrências automáticas ou manuais com investigação, ação e eficácia.
+- Sprint 3: testes de servidor e HTTP aprovados; validação visual e prints novos ainda pendentes por indisponibilidade da automação do navegador no ambiente Windows. O manual operacional é uma minuta sem prints desta sprint.
 
 ## Executar
 
@@ -34,6 +37,7 @@ A inicialização aplica as migrações SQLite e cria os cadastros de demonstra�
 | `/cep-coleta?id=ID` | Preencher ou consultar conjunto e histórico |
 | `/cep-dia` | Progresso e consulta por data de criação |
 | `/cep-cartas` | Executar e consultar análises X̄-R salvas |
+| `/cep-operacao` | Programação, metas, limites aprovados, ocorrências e histórico |
 | `/coleta` | Coleta de subgrupos e templates |
 | `/coleta/importar` | Importar CSV/XLSX na base antes de selecionar no conjunto |
 | `/historico` | Auditoria geral, conforme perfil |
@@ -44,6 +48,8 @@ A inicialização aplica as migrações SQLite e cria os cadastros de demonstra�
 - [Resultados da Sprint 0](docs/sprint-0-resultados.md)
 - [Resultados da Sprint 1](docs/sprint-1-resultados.md)
 - [Resultados da Sprint 2](docs/sprint-2-resultados.md)
+- [Resultados e pendências da Sprint 3](docs/sprint-3-resultados.md)
+- [Minuta do método operacional](docs/manual/Metodo%20de%20Uso%20CEP%20Operacional%20Sprint%203.docx)
 - [Método das cartas em Word](docs/manual/Metodo%20de%20Uso%20Cartas%20CEP%20Sprint%202.docx)
 - [Método de uso em Word](docs/manual/Metodo%20de%20Uso%20QMS%20CEP%20Sprint%201.docx)
 - [Ficha Excel CEP 25 × 3](src/Qms.Web/wwwroot/modelos/Modelo_CEP_25x3.xlsx): preencher e copiar B8:D32 para a colagem do conjunto. Para upload à base, usar o template da característica em `/coleta`.

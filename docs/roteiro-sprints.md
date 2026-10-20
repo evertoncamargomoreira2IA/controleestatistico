@@ -4,6 +4,8 @@ Requisitos acordados em 17/10/2026. Aplicação web C# / ASP.NET Core / Blazor p
 
 Atualização de escopo em 19/10/2026: Kappa e Gage R&R retirados. Foco em CEP e Cp/Cpk. Sprints 0, 1 e 2 entregues para validação local; homologação corporativa permanece separada.
 
+20/10/2026: Sprint 3 implementada e verificada em servidor/HTTP, com fechamento visual e prints pendentes. Consultar `sprint-3-resultados.md`. Não confundir implementação com aceite visual ou homologação corporativa.
+
 ## Requisitos transversais
 
 - Todo módulo deve oferecer histórico consultável: autor, data/hora, origem, parâmetros, revisões, resultado, situação e alterações. Estudos aprovados não são sobrescritos; correções geram revisão. Auditoria técnica e histórico operacional são complementares.
