@@ -42,7 +42,7 @@ public interface ICepDatasetService
 {
     Task<IReadOnlyList<CepChoice>> ChoicesAsync(ClaimsPrincipal user);
     Task<IReadOnlyList<Instrument>> InstrumentsAsync(ClaimsPrincipal user);
-    Task<CepDataset> CreateAsync(int characteristicId, string title, ClaimsPrincipal user);
+    Task<CepDataset> CreateAsync(int characteristicId, string title, ClaimsPrincipal user, string studyKind = "CEP");
     Task<CepDataset> GetAsync(int id, ClaimsPrincipal user);
     Task<CepDataset> SaveAsync(CepSaveInput input, ClaimsPrincipal user);
     Task<IReadOnlyList<CepSourceRow>> SourcesAsync(
@@ -54,5 +54,5 @@ public interface ICepDatasetService
         ClaimsPrincipal user
     );
     Task<IReadOnlyList<CepHistoryItem>> HistoryAsync(int id, ClaimsPrincipal user);
-    Task<CepDaily> DailyAsync(DateOnly day, ClaimsPrincipal user);
+    Task<CepDaily> DailyAsync(DateOnly day, ClaimsPrincipal user, string studyKind = "CEP");
 }

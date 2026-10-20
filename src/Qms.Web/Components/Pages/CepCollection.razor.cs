@@ -23,6 +23,13 @@ public partial class CepCollection
 
     [SupplyParameterFromQuery]
     public int? Id { get; set; }
+    private bool IsCapability => new Uri(Navigation.Uri).AbsolutePath == "/cp-coleta";
+    private string StudyKind => IsCapability ? "CAPABILITY" : "CEP";
+    private string StudyLabel => IsCapability ? "Cp/Cpk" : "CEP";
+    private int RequiredSamples => IsCapability ? 33 : 25;
+    private string CollectionPath => IsCapability ? "/cp-coleta" : "/cep-coleta";
+    private string DailyPath => IsCapability ? "/cp-dia" : "/cep-dia";
+    [Inject] private IStudyFileReader FileReader { get; set; } = default!;
     private ClaimsPrincipal user = new();
     private IReadOnlyList<CepChoice> choices = [];
     private IReadOnlyList<Instrument> instruments = [];
@@ -60,6 +67,11 @@ public partial class CepCollection
     {
         await Execute(async () =>
         {
+            dataset = null;
+            rows = [];
+            history = [];
+            sources = [];
+            sourceSelection.Clear();
             user = (await Auth.GetAuthenticationStateAsync()).User;
             canWrite = Roles.All.Any(r =>
                 user.IsInRole(r) && Permissions.Allows(r, Permissions.CollectionCreate)
@@ -68,13 +80,15 @@ public partial class CepCollection
             instruments = await Service.InstrumentsAsync(user);
             if (Id.HasValue)
             {
-                Load(await Service.GetAsync(Id.Value, user));
+                var loaded = await Service.GetAsync(Id.Value, user);
+                if (loaded.StudyKind != StudyKind) throw new ArgumentException("Este conjunto pertence a outro módulo. Abra pelo progresso correspondente.");
+                Load(loaded);
                 history = await Service.HistoryAsync(Id.Value, user);
             }
             else
             {
                 dataset = null;
-                title = "CEP " + LocalTime.ToLocal(DateTimeOffset.UtcNow).ToString("dd/MM/yyyy");
+                title = StudyLabel + " " + LocalTime.ToLocal(DateTimeOffset.UtcNow).ToString("dd/MM/yyyy");
             }
         });
         loading = false;
@@ -103,8 +117,8 @@ public partial class CepCollection
     private Task CreateAsync() =>
         Execute(async () =>
         {
-            var created = await Service.CreateAsync(characteristicId, title, user);
-            Navigation.NavigateTo($"/cep-coleta?id={created.Id}", forceLoad: true);
+            var created = await Service.CreateAsync(characteristicId, title, user, StudyKind);
+            Navigation.NavigateTo($"{CollectionPath}?id={created.Id}", forceLoad: true);
         });
 
     private void Load(CepDataset item)
@@ -183,7 +197,7 @@ public partial class CepCollection
             );
             history = await Service.HistoryAsync(dataset.Id, user);
             message = complete
-                ? "Conjunto concluído e preservado para consulta. Análise estatística disponível na próxima sprint."
+                ? "Conjunto concluído e preservado para consulta. Abra a análise no botão acima."
                 : "Rascunho salvo. Leituras e histórico preservados.";
         });
 
@@ -202,6 +216,21 @@ public partial class CepCollection
         message = "Identificação aplicada às linhas digitadas. Confira o rastreio e salve.";
     }
 
+    private Task UploadAsync(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e) => Execute(async () =>
+    {
+        if (!Editable || !confirmReplace) throw new ArgumentException("Confirme a substituição da grade antes de enviar.");
+        try
+        {
+            using var stream = e.File.OpenReadStream(5 * 1024 * 1024);
+            var imported = await FileReader.ReadAsync(e.File.Name, stream, RequiredSamples);
+            pasteText = string.Join("\n", imported.Select(x => string.Join(";", x)));
+            PasteRows();
+            if (error is null) message = "Arquivo aplicado à grade. Confira identificação, leituras e salve.";
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException or FormatException)
+        { throw new ArgumentException("Arquivo inválido ou excede 5 MB. Use o modelo CSV/XLSX de leituras.", ex); }
+    });
+
     private void PasteRows()
     {
         error = message = null;
@@ -210,8 +239,8 @@ public partial class CepCollection
             if (!confirmReplace)
                 throw new ArgumentException("Confirme a substituição da grade.");
             var lines = pasteText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-            if (lines.Length is < 1 or > 25)
-                throw new ArgumentException("Cole de uma a 25 linhas, sem cabeçalho.");
+            if (lines.Length < 1 || lines.Length > RequiredSamples)
+                throw new ArgumentException($"Cole de uma a {RequiredSamples} linhas, sem cabeçalho.");
             var parsed = lines
                 .Select(
                     (line, i) =>
@@ -229,7 +258,7 @@ public partial class CepCollection
                 )
                 .ToArray();
             rows = Enumerable
-                .Range(1, 25)
+                .Range(1, RequiredSamples)
                 .Select(i => new EntryRow
                 {
                     Position = i,
@@ -267,9 +296,9 @@ public partial class CepCollection
 
     private void ToggleSource(int id, bool selected)
     {
-        if (selected && sourceSelection.Count >= 25)
+        if (selected && sourceSelection.Count >= RequiredSamples)
         {
-            error = "Selecione no máximo 25 amostras.";
+            error = $"Selecione no máximo {RequiredSamples} amostras.";
             return;
         }
         if (selected)
@@ -281,9 +310,9 @@ public partial class CepCollection
     private void ApplySources()
     {
         error = message = null;
-        if (!confirmReplace || sourceSelection.Count is < 1 or > 25)
+        if (!confirmReplace || sourceSelection.Count < 1 || sourceSelection.Count > RequiredSamples)
         {
-            error = "Selecione de uma a 25 amostras e confirme a substituição da grade.";
+            error = $"Selecione de uma a {RequiredSamples} amostras e confirme a substituição da grade.";
             return;
         }
         var selected = sources
@@ -293,7 +322,7 @@ public partial class CepCollection
             .ThenBy(x => x.Id)
             .ToArray();
         rows = Enumerable
-            .Range(1, 25)
+            .Range(1, RequiredSamples)
             .Select(i =>
             {
                 if (i > selected.Length)

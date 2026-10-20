@@ -16,6 +16,8 @@ Sistema web de qualidade para servidor corporativo, com .NET 10, Blazor Interact
 - Aprovação e revogação de limites por Qualidade/Administração; novas análises preservam regras e limites usados. Ocorrências automáticas ou manuais com investigação, ação e eficácia.
 - Sprint 3: testes de servidor e HTTP aprovados; validação visual e prints novos ainda pendentes por indisponibilidade da automação do navegador no ambiente Windows. O manual operacional é uma minuta sem prints desta sprint.
 
+- Sprint 4: Cp/Cpk de 33 × 3 sobre as médias, upload direto CSV/XLSX em ambos os módulos, progresso e estudos imutáveis. 121 testes e 43 verificações HTTP aprovados. Aceite visual permanece pendente.
+
 ## Executar
 
 Instalar o SDK .NET 10. A pasta `.tools/dotnet`, quando presente, é usada pelos scripts locais e não faz parte do repositório.
@@ -38,12 +40,21 @@ A inicialização aplica as migrações SQLite e cria os cadastros de demonstra�
 | `/cep-dia` | Progresso e consulta por data de criação |
 | `/cep-cartas` | Executar e consultar análises X̄-R salvas |
 | `/cep-operacao` | Programação, metas, limites aprovados, ocorrências e histórico |
+| `/cp-coleta` | Coleta Cp/Cpk 33 × 3 e upload de leituras |
+| `/cp-dia` | Progresso e histórico de coletas Cp/Cpk |
+| `/cp-estudos` | Executar e consultar estudos sobre as 33 médias |
 | `/coleta` | Coleta de subgrupos e templates |
 | `/coleta/importar` | Importar CSV/XLSX na base antes de selecionar no conjunto |
 | `/historico` | Auditoria geral, conforme perfil |
 
 ## Documentação e continuidade
 
+- [Resultados da Sprint 4](docs/sprint-4-resultados.md)
+- [Método Cp/Cpk sobre médias](docs/metodo-cp-cpk.md)
+- [Guia de uso e simulados em Word](docs/manual/Metodo%20de%20Uso%20CP%20CPK%20Sprint%204.docx)
+- [Simulado CEP Excel](src/Qms.Web/wwwroot/modelos/Simulado_CEP_25x3.xlsx) · [CSV](src/Qms.Web/wwwroot/modelos/Simulado_CEP_25x3.csv)
+- [Simulado Cp/Cpk Excel](src/Qms.Web/wwwroot/modelos/Simulado_CP_CPK_33x3.xlsx) · [CSV](src/Qms.Web/wwwroot/modelos/Simulado_CP_CPK_33x3.csv)
+- [Skill da Sprint 4](skills/qms-cep-sprint-04/SKILL.md)
 - [Roteiro das sprints](docs/roteiro-sprints.md)
 - [Resultados da Sprint 0](docs/sprint-0-resultados.md)
 - [Resultados da Sprint 1](docs/sprint-1-resultados.md)
@@ -64,7 +75,7 @@ O manual é uma minuta no padrão Foxconn do procedimento de referência, com pr
 - `src/Qms.Domain`: entidades e regras.
 - `src/Qms.Application`: contratos e validação.
 - `src/Qms.Infrastructure`: persistência, auditoria, Identity e serviços.
-- `src/Qms.Statistics`: motor X̄-R 25 × 3 e regras versionadas.
+- `src/Qms.Statistics`: motor X̄-R 25 × 3, regras versionadas e Cp/Cpk das 33 médias.
 - `src/Qms.Web`: aplicação Blazor.
 - `tests/Qms.Tests`: testes xUnit.
 - `reference`: motor JavaScript anterior como referência de cálculo.

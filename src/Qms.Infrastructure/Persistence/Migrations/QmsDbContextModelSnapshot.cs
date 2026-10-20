@@ -215,6 +215,50 @@ namespace Qms.Infrastructure.Persistence.Migrations
                     b.ToTable("audit_log", (string)null);
                 });
 
+            modelBuilder.Entity("Qms.Domain.Collection.CapabilityStudy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DatasetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DatasetVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InputJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SettingsVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatasetId", "DatasetVersion", "SettingsVersion", "Method")
+                        .IsUnique();
+
+                    b.ToTable("capability_studies", (string)null);
+                });
+
             modelBuilder.Entity("Qms.Domain.Collection.CepAnalysis", b =>
                 {
                     b.Property<int>("Id")
@@ -294,6 +338,13 @@ namespace Qms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("StudyKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("CEP");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1233,6 +1284,15 @@ namespace Qms.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Qms.Domain.Collection.CapabilityStudy", b =>
+                {
+                    b.HasOne("Qms.Domain.Collection.CepDataset", null)
+                        .WithMany()
+                        .HasForeignKey("DatasetId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

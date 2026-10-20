@@ -126,7 +126,8 @@ public sealed class CepOperationsService(IServiceScopeFactory scopes) : ICepOper
                 .SingleOrDefaultAsync(x => x.Id == datasetId)
             ?? throw new ArgumentException("Conjunto não encontrado.");
         if (
-            set.CharacteristicId != plan.CharacteristicId
+            set.StudyKind != "CEP"
+            || set.CharacteristicId != plan.CharacteristicId
             || set.CharacteristicRevision != plan.CharacteristicRevision
             || set.Samples.Any(x => x.IsComplete && x.Shift != plan.Shift)
         )

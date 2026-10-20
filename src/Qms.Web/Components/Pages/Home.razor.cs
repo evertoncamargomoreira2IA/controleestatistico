@@ -18,11 +18,13 @@ public partial class Home
         System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
     private int activeUsers;
     private int analysesCount;
+    private int capabilityCount;
     private int subgroupsToday;
 
     protected override async Task OnInitializedAsync()
     {
         analysesCount = await Db.CepAnalyses.CountAsync();
+        capabilityCount = await Db.CapabilityStudies.CountAsync();
         activeUsers = await UserManager.Users.CountAsync(user => user.IsActive);
         var localNow = LocalTime.ToLocal(DateTimeOffset.UtcNow);
         var localStart = new DateTimeOffset(localNow.Date, localNow.Offset);

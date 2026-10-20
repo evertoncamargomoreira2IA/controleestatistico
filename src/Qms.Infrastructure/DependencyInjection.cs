@@ -51,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<ICepDatasetService, CepDatasetService>();
         services.AddScoped<ICepAnalysisService, CepAnalysisService>();
+        services.AddScoped<ICapabilityService, CapabilityService>();
+        services.AddScoped<IStudyFileReader, StudyFileReader>();
         services.AddScoped<ICepOperationsService, CepOperationsService>();
         services.AddScoped<IImportService, ImportService>();
         services.AddScoped<ITemplateService, TemplateService>();

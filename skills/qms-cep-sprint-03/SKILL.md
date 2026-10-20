@@ -26,6 +26,6 @@ CUA falhou antes de abrir a página com `CreateProcessSecurityEnvironment failed
 
 ## Documentação e fechamento
 
-Minuta Word `docs/manual/Metodo de Uso CEP Operacional Sprint 3.docx`, gerador `scripts/gerar_manual_operacional.py`. Template e helpers Foxconn reutilizados, sem prints novos enquanto navegador indisponível. Ao recuperar o navegador: testar os fluxos, salvar prints reais, incluir na minuta, renderizar e inspecionar todas as páginas, atualizar relatório e skill, depois enviar novo commit ao GitHub. Não iniciar Sprint 4 sem autorização.
+Minuta Word `docs/manual/Metodo de Uso CEP Operacional Sprint 3.docx`, gerador `scripts/gerar_manual_operacional.py`. Template e helpers Foxconn reutilizados, sem prints novos enquanto navegador indisponível. Ao recuperar o navegador: testar os fluxos, salvar prints reais, incluir na minuta, renderizar e inspecionar todas as páginas, atualizar relatório e skill, depois enviar novo commit ao GitHub. Em 20/10/2026 o usuário autorizou executar a Sprint 4 e adiar o aceite visual desta sprint; consultar o checkpoint da Sprint 4.
 
 Preferência persistente do usuário: baixo consumo, contexto curto e reutilização de verificações já válidas. Não criar agentes ou automações sem solicitação. Conta local de demonstração admin/admin apenas em Development.

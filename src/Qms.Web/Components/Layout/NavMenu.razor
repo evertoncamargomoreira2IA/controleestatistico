@@ -22,15 +22,11 @@
 </Authorized>
 </AuthorizeView>
 <span class="nav-group">Estudos</span>
-<AuthorizeView Policy="perm:studies.run">
-<Authorized>
-<a class="nav-disabled" aria-disabled="true">▥ <span>Capabilidade</span>
-<span class="soon">F4</span>
-</a>
-
-
-</Authorized>
-</AuthorizeView>
+<AuthorizeView Policy="perm:view"><Authorized>
+<NavLink href="/cp-coleta">＋ <span>Coleta Cp/Cpk 33 × 3</span></NavLink>
+<NavLink href="/cp-dia">▤ <span>Progresso Cp/Cpk</span></NavLink>
+<NavLink href="/cp-estudos">▥ <span>Estudos Cp/Cpk</span></NavLink>
+</Authorized></AuthorizeView>
 <span class="nav-group">Gestão</span>
 <AuthorizeView Policy="perm:view">
 <Authorized>

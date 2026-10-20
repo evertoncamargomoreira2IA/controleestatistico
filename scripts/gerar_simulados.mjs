@@ -1,0 +1,63 @@
+import fs from 'node:fs/promises';
+import { Workbook, SpreadsheetFile } from '@oai/artifact-tool';
+
+const output='src/Qms.Web/wwwroot/modelos';
+await fs.mkdir(output,{recursive:true});
+await fs.mkdir('artifacts/simulados',{recursive:true});
+for(const [name,count] of [['CEP_25x3',25],['CP_CPK_33x3',33]]) {
+  const wb=Workbook.create();
+  const raw=wb.worksheets.add('Leituras');
+  raw.showGridLines=false;
+  raw.getRange(`A1:D${count+1}`).format.font={name:'Arial',size:11,color:'#203446'};
+  raw.getRange(`A1:D${count+1}`).format.columnWidth=17;
+  raw.getRange(`A1:D${count+1}`).format.rowHeight=23;
+  raw.getRange('A1:D1').values=[['amostra','leitura1','leitura2','leitura3']];
+  raw.getRange('A1:D1').format={fill:'#006BB6',font:{name:'Arial',size:11,bold:true,color:'#FFFFFF'}};
+  const data=Array.from({length:count},(_,i)=>{
+    const mean=count===33 ? 10+(i%2===0?-.03:.03) : 10+[-.01,.01,0,-.02,.02,0,.01,-.01,.02,-.02][i%10];
+    return [i+1,...[mean-.04,mean,mean+.04].map(x=>Math.round(x*100)/100)];
+  });
+  raw.getRange(`A2:D${count+1}`).values=data;
+  raw.getRange(`B2:D${count+1}`).setNumberFormat('0.0000');
+  raw.getRange(`B2:D${count+1}`).format.fill='#FFF2CC';
+  raw.freezePanes.freezeRows(1);
+  const check=wb.worksheets.add('Conferencia');check.showGridLines=false;
+  check.getRange('A1:H48').format.font={name:'Arial',size:11,color:'#203446'};
+  check.getRange('A1:H48').format.rowHeight=23;
+  check.getRange('A:A').format.columnWidth=30;check.getRange('B:D').format.columnWidth=18;check.getRange('F:H').format.columnWidth=22;
+  check.getRange('A2').values=[['SIMULADO para teste de '+(count===33?'Cp/Cpk':'CEP')]];
+  check.getRange('A2').format.font={name:'Arial',size:15,bold:true,color:'#006BB6'};
+  check.getRange('A4:B6').values=[['Nominal (mm)',10],['LSL (mm)',9.5],['USL (mm)',10.5]];
+  check.getRange('A8:C8').values=[['Amostra','Média do trio','Amplitude do trio']];
+  check.getRange('D8').values=[['MR das médias']];
+  check.getRange('A8:D8').format.fill='#E3EEF8';
+  check.getRange(`A9:D${count+8}`).formulas=data.map((_,i)=>{
+    const rr=i+2,cr=i+9;
+    return [`=Leituras!A${rr}`,`=AVERAGE(Leituras!B${rr}:D${rr})`,`=MAX(Leituras!B${rr}:D${rr})-MIN(Leituras!B${rr}:D${rr})`,i===0?'=""':`=ABS(B${cr}-B${cr-1})`];
+  });
+  check.getRange(`B9:D${count+8}`).setNumberFormat('0.000000');
+  const labels=count===33?['Média das 33 médias','MR médio (32 pares)','Sigma local MR/1,128','Cp das médias','Cpk das médias']:['Média das 25 médias','Amplitude média','LIC X média','LSC X média','LSC R'];
+  check.getRange('F4:F8').values=labels.map(x=>[x]);
+  const formulas=count===33 ? [`=AVERAGE(B9:B41)`,`=AVERAGE(D10:D41)`,`=G5/1.128`,`=($B$6-$B$5)/(6*G6)`,`=MIN(($B$6-G4)/(3*G6),(G4-$B$5)/(3*G6))`] : [`=AVERAGE(B9:B33)`,`=AVERAGE(C9:C33)`,`=G4-1.023*G5`,`=G4+1.023*G5`,`=2.574*G5`];
+  check.getRange('G4:G8').formulas=formulas.map(x=>[x]);check.getRange('G4:G8').setNumberFormat('0.000000');
+  check.getRange('F11').values=[['Dados fictícios; não usar como medição real.']];
+  check.getRange('F12').values=[['Selecione Altura / TL-001 no sistema.']];
+  check.getRange('F13').values=[['Instrumento INS-001, turno T1.']];
+  check.getRange('F14').values=[['Informe data local válida e lote SIMULADO.']];
+  check.getRange('F15').values=[['Envie o arquivo na coleta correspondente.']];
+  check.getRange('F16').values=[['A primeira aba contém só as leituras.']];
+  check.getRange('F18').values=[['Método e interpretação: docs/metodo-cp-cpk.md']];
+  check.getRange('F19').values=[['NIST: itl.nist.gov/div898/handbook/pmc/section3/pmc322.htm']];
+  wb.recalculate();
+  const values=check.getRange('G4:G8').values.map(x=>x[0]);
+  if(values.some(x=>typeof x!=='number'||!Number.isFinite(x)))throw new Error('Fórmulas inválidas '+JSON.stringify(values));
+  if(count===33 && Math.abs(values[3]-3.133333333333333)>1e-8)throw new Error('Cp divergente');
+  await fs.writeFile(`${output}/Simulado_${name}.csv`,'\uFEFFamostra;leitura1;leitura2;leitura3\r\n'+data.map(row=>row.map(x=>String(x).replace('.',',')).join(';')).join('\r\n')+'\r\n','utf8');
+  await (await SpreadsheetFile.exportXlsx(wb)).save(`${output}/Simulado_${name}.xlsx`);
+  const image=await wb.render({sheetName:'Conferencia',range:'A1:H20',scale:1.5,format:'png'});
+  await fs.writeFile(`artifacts/simulados/${name}.png`,new Uint8Array(await image.arrayBuffer()));
+  await fs.writeFile(`artifacts/simulados/${name}.json`,JSON.stringify({count,values,data},null,2));
+  await fs.rm(`${output}/Simulado_${name}.xlsx.inspect.ndjson`,{force:true});
+  console.log(name,JSON.stringify(values));
+}
+process.exit(0);

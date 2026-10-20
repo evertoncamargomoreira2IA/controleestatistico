@@ -16,6 +16,7 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
     public DbSet<CepDataset> CepDatasets => Set<CepDataset>();
     public DbSet<CepSample> CepSamples => Set<CepSample>();
     public DbSet<CepAnalysis> CepAnalyses => Set<CepAnalysis>();
+    public DbSet<CapabilityStudy> CapabilityStudies => Set<CapabilityStudy>();
     public DbSet<CepPlan> CepPlans => Set<CepPlan>();
     public DbSet<CepPlanDataset> CepPlanDatasets => Set<CepPlanDataset>();
     public DbSet<CepLimitApproval> CepLimitApprovals => Set<CepLimitApproval>();
@@ -51,6 +52,8 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
 
     private void EnsureAuditLogsAreAppendOnly()
     {
+        if (ChangeTracker.Entries<CapabilityStudy>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Estudos de capabilidade salvos são somente para inclusão.");
         if (ChangeTracker.Entries().Any(x => x.Entity is CepLimitApproval or CepLimitRevocation or CepPlanDataset
             && x.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Vínculos e decisões de limites preservam o registro original.");
@@ -124,6 +127,8 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
         sets.ToTable("cep_datasets");
         sets.HasKey(x => x.Id);
         sets.Property(x => x.Version).IsConcurrencyToken();
+        sets.Property(x => x.StudyKind).HasMaxLength(20).HasDefaultValue("CEP").IsRequired();
+        sets.Ignore(x => x.RequiredSamples);
         sets.Property(x => x.Title).HasMaxLength(120).IsRequired();
         sets.Property(x => x.CreatedBy).HasMaxLength(450).IsRequired();
         sets.Property(x => x.CharacteristicName).HasMaxLength(120).IsRequired();
@@ -156,6 +161,15 @@ public sealed class QmsDbContext(DbContextOptions<QmsDbContext> options)
             .WithMany()
             .HasForeignKey(x => x.SourceSubgroupId)
             .OnDelete(DeleteBehavior.Restrict);
+        var studies = builder.Entity<CapabilityStudy>();
+        studies.ToTable("capability_studies");
+        studies.HasKey(x => x.Id);
+        studies.Property(x => x.Method).HasMaxLength(80).IsRequired();
+        studies.Property(x => x.CreatedBy).HasMaxLength(450).IsRequired();
+        studies.Property(x => x.InputJson).IsRequired();
+        studies.Property(x => x.ResultJson).IsRequired();
+        studies.HasIndex(x => new { x.DatasetId, x.DatasetVersion, x.SettingsVersion, x.Method }).IsUnique();
+        studies.HasOne<CepDataset>().WithMany().HasForeignKey(x => x.DatasetId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureCollection(ModelBuilder builder)

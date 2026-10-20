@@ -20,7 +20,7 @@ try {
     $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
     $login = Request '/Account/Login' $session
     Check 'Página de login responde 200' ($login.StatusCode -eq 200)
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao', '/cp-coleta', '/cp-dia', '/cp-estudos')) {
         $response = Request $path $session
         Check "Anônimo bloqueado: $path" ($response.StatusCode -eq 302 -and "$($response.Headers.Location)" -match '/Account/Login')
     }
@@ -39,7 +39,7 @@ try {
     } else {
         Check 'Demonstração mantém admin/admin sem troca obrigatória' ($response.StatusCode -eq 200)
     }
-    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao')) {
+    foreach ($path in @('/', '/coleta', '/historico', '/usuarios', '/cadastros', '/definicoes', '/cep-dia', '/cep-coleta', '/cep-cartas', '/cep-operacao', '/cp-coleta', '/cp-dia', '/cp-estudos')) {
         $response = Request $path $session
         Check "Administrador acessa: $path" ($response.StatusCode -eq 200)
     }
@@ -53,6 +53,17 @@ try {
     Check 'CEP operacional renderiza' ($operationsPage.Content -match 'CEP operacional')
     Check 'Formulário de metas disponível' ($operationsPage.Content -match 'Meta de conjuntos')
     Check 'Aprovação de limites disponível ao administrador' ($operationsPage.Content -match 'Aprovar e registrar')
+    $capabilityCollection = Request '/cp-coleta' $session
+    Check 'Coleta Cp/Cpk mostra 33 amostras' ($capabilityCollection.Content -match '33' -and $capabilityCollection.Content -match 'Novo conjunto Cp/Cpk' -and $capabilityCollection.Content -notmatch 'Novo conjunto CEP')
+    $capabilityStudies = Request '/cp-estudos' $session
+    Check 'Estudos Cp/Cpk explicam o método e oferecem cálculo' ($capabilityStudies.Content -match '1,128' -and $capabilityStudies.Content -match 'Calcular e salvar estudo')
+    $capabilityDaily = Request '/cp-dia' $session
+    Check 'Progresso Cp/Cpk aponta para a coleta correta' ($capabilityDaily.Content -match 'href="/cp-coleta"')
+    foreach ($file in @('Simulado_CEP_25x3.csv','Simulado_CEP_25x3.xlsx','Simulado_CP_CPK_33x3.csv','Simulado_CP_CPK_33x3.xlsx')) {
+        $download = Request "/modelos/$file" $session
+        Check "Download do simulado: $file" ($download.StatusCode -eq 200 -and $download.RawContentLength -gt 100)
+    }
+
 } finally {
     $results | ConvertTo-Json | Set-Content artifacts/http-smoke.json -Encoding utf8
     $results | Format-Table -AutoSize

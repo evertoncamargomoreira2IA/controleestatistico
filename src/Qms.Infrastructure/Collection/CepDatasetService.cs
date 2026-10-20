@@ -70,10 +70,13 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
     public async Task<CepDataset> CreateAsync(
         int characteristicId,
         string title,
-        ClaimsPrincipal user
+        ClaimsPrincipal user,
+        string studyKind = "CEP"
     )
     {
         var actor = Authorize(user, Permissions.CollectionCreate);
+        if (studyKind is not ("CEP" or "CAPABILITY"))
+            throw new ArgumentException("Tipo de estudo inválido.");
         var choice =
             (await ChoicesAsync(user)).SingleOrDefault(x => x.Characteristic.Id == characteristicId)
             ?? throw new ArgumentException(
@@ -87,6 +90,7 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
         var now = DateTimeOffset.UtcNow;
         var item = new CepDataset
         {
+            StudyKind = studyKind,
             CharacteristicId = c.Id,
             CharacteristicRevision = c.Revision,
             CharacteristicName = c.Name,
@@ -99,7 +103,7 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
             CreatedBy = actor,
             CreatedAt = now,
             UpdatedAt = now,
-            Samples = Enumerable.Range(1, 25).Select(i => new CepSample { Position = i }).ToList(),
+            Samples = Enumerable.Range(1, studyKind == "CAPABILITY" ? 33 : 25).Select(i => new CepSample { Position = i }).ToList(),
         };
         db.CepDatasets.Add(item);
         await db.SaveChangesAsync();
@@ -150,11 +154,11 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
                 "O conjunto foi atualizado por outro usuário. Reabra antes de editar."
             );
         if (
-            input.Rows.Count != 25
-            || !input.Rows.Select(x => x.Position).Order().SequenceEqual(Enumerable.Range(1, 25))
+            input.Rows.Count != item.RequiredSamples
+            || !input.Rows.Select(x => x.Position).Order().SequenceEqual(Enumerable.Range(1, item.RequiredSamples))
         )
             throw new ArgumentException(
-                "O conjunto deve ter exatamente 25 posições, sem repetição."
+                $"O conjunto deve ter exatamente {item.RequiredSamples} posições, sem repetição."
             );
         var title = ValidateTitle(input.Title);
         var before = System.Text.Json.JsonSerializer.SerializeToElement(item);
@@ -290,11 +294,17 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
                     $"Amostra {row.Position}: valores excedem a faixa numérica permitida."
                 );
         }
-        if (input.Complete && item.CompleteSamples != 25)
+        if (input.Complete && item.CompleteSamples != item.RequiredSamples)
             throw new ArgumentException(
-                "Para concluir, preencha as 25 amostras com três leituras cada (75 leituras)."
+                $"Para concluir, preencha as {item.RequiredSamples} amostras com três leituras cada ({item.RequiredSamples * 3} leituras)."
             );
         item.Title = title;
+        if (input.Complete && item.StudyKind == "CAPABILITY")
+        {
+            var ordered = item.Samples.OrderBy(x => x.Position).ToArray();
+            if (ordered.Zip(ordered.Skip(1), (a, b) => b.CollectedAt < a.CollectedAt).Any(x => x))
+                throw new ArgumentException("Cp/Cpk exige as amostras em ordem cronológica para as amplitudes móveis.");
+        }
         item.UpdatedAt = now;
         item.Version++;
         if (input.Complete)
@@ -398,7 +408,7 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
             .ToArray();
     }
 
-    public async Task<CepDaily> DailyAsync(DateOnly day, ClaimsPrincipal user)
+    public async Task<CepDaily> DailyAsync(DateOnly day, ClaimsPrincipal user, string studyKind = "CEP")
     {
         Authorize(user, Permissions.View);
         var start = LocalTime.ParseLocal(
@@ -412,7 +422,7 @@ public sealed class CepDatasetService(IServiceScopeFactory scopes) : ICepDataset
             .ServiceProvider.GetRequiredService<QmsDbContext>()
             .CepDatasets.AsNoTracking()
             .Include(x => x.Samples)
-            .Where(x => x.CreatedAt >= start && x.CreatedAt < end)
+            .Where(x => x.CreatedAt >= start && x.CreatedAt < end && x.StudyKind == studyKind)
             .OrderByDescending(x => x.UpdatedAt)
             .ToListAsync();
         return new(day, sets);

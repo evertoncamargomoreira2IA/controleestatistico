@@ -6,6 +6,8 @@ Atualização de escopo em 19/10/2026: Kappa e Gage R&R retirados. Foco em CEP e
 
 20/10/2026: Sprint 3 implementada e verificada em servidor/HTTP, com fechamento visual e prints pendentes. Consultar `sprint-3-resultados.md`. Não confundir implementação com aceite visual ou homologação corporativa.
 
+20/10/2026: usuário autorizou adiar o aceite visual da Sprint 3 e executar a Sprint 4. Cp/Cpk e simulados entregues para teste local, com 121 testes e 43 verificações HTTP aprovados; aceite visual e capturas das telas continuam pendentes. Método em `metodo-cp-cpk.md`; evidências em `sprint-4-resultados.md`.
+
 ## Requisitos transversais
 
 - Todo módulo deve oferecer histórico consultável: autor, data/hora, origem, parâmetros, revisões, resultado, situação e alterações. Estudos aprovados não são sobrescritos; correções geram revisão. Auditoria técnica e histórico operacional são complementares.
@@ -19,7 +21,7 @@ Atualização de escopo em 19/10/2026: Kappa e Gage R&R retirados. Foco em CEP e
 ## Coleta e interpretação
 
 - CEP: conjunto inicial de 25 amostras com 3 leituras cada, total 75. Cada ponto X̄ usa a média das três leituras; a carta R usa sua amplitude.
-- Cp/Cpk: 33 amostras com 3 leituras cada, total 99, considerando as 33 médias conforme solicitado. Definir e validar a estimativa de dispersão e a interpretação dos limites antes de implementar os índices, distinguindo resultados de médias e de medições individuais.
+- Cp/Cpk: 33 amostras com 3 leituras cada, total 99, considerando as 33 médias conforme solicitado. Método implementado: sigma local da série de médias por MR de dois pontos / 1,128, distinguindo resultados de médias e de medições individuais.
 - Rascunho pode estar incompleto; conclusão exige a quantidade completa e válida. Seleção pela base deve mostrar os registros escolhidos explicitamente.
 
 ## Sprints e critérios de aceite

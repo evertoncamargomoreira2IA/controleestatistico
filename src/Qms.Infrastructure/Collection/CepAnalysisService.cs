@@ -42,7 +42,7 @@ public sealed class CepAnalysisService(IServiceScopeFactory scopes) : ICepAnalys
                 .Include(x => x.Samples)
                 .SingleOrDefaultAsync(x => x.Id == datasetId)
             ?? throw new ArgumentException("Conjunto não encontrado.");
-        if (!dataset.CompletedAt.HasValue || dataset.CompleteSamples != 25)
+        if (dataset.StudyKind != "CEP" || !dataset.CompletedAt.HasValue || dataset.CompleteSamples != 25)
             throw new ArgumentException(
                 "Conclua as 25 amostras com três leituras antes de analisar."
             );

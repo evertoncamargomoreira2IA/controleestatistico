@@ -3,6 +3,8 @@ namespace Qms.Domain.Collection;
 public sealed class CepDataset
 {
     public const int TargetSamples = 25;
+    public string StudyKind { get; set; } = "CEP";
+    public int RequiredSamples => StudyKind == "CAPABILITY" ? 33 : 25;
     public int Id { get; set; }
     public int CharacteristicId { get; set; }
     public int CharacteristicRevision { get; set; }
@@ -22,7 +24,7 @@ public sealed class CepDataset
     public int CompleteSamples => Samples.Count(x => x.IsComplete);
     public int Readings =>
         Samples.Sum(x => new[] { x.Value1, x.Value2, x.Value3 }.Count(v => v.HasValue));
-    public int ProgressPercent => CompleteSamples * 100 / TargetSamples;
+    public int ProgressPercent => CompleteSamples * 100 / RequiredSamples;
 }
 
 public sealed class CepSample

@@ -1,4 +1,6 @@
 @page "/cep-dia"
+@page "/cp-dia"
+@inject NavigationManager Navigation
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "perm:view")]
 @using Qms.Application.Collection
@@ -7,27 +9,32 @@
 @inject ICepAnalysisService Analyses
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
 
-<PageTitle>Progresso diário CEP · QMS</PageTitle>
-<PageHeader Title="Progresso diário CEP" Breadcrumb="Operação / Histórico de conjuntos" />
-<div class="collection-toolbar cep-daily-toolbar"><a class="btn" href="/cep-coleta">Novo conjunto CEP</a><label class="field">Data de criação<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="LoadAsync">Consultar data</button><label class="field">Filtrar processo, título ou característica<input class="form-control" @bind="filter" @bind:event="oninput" /></label></div>
+<PageTitle>Progresso diário @Label · QMS</PageTitle>
+<PageHeader Title="@($"Progresso diário {Label}")" Breadcrumb="Operação / Histórico de conjuntos" />
+<div class="collection-toolbar cep-daily-toolbar"><a class="btn" href="@CollectionPath">Novo conjunto @Label</a><label class="field">Data de criação<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="LoadAsync">Consultar data</button><label class="field">Filtrar processo, título ou característica<input class="form-control" @bind="filter" @bind:event="oninput" /></label></div>
 @if (error is not null) { <div class="alert alert-bad" role="alert">@error</div> }
-<p>Conjuntos criados na data local de São Paulo, com seu estado atual. Abra o conjunto para consultar cada salvamento no histórico. <a href="/cep-operacao">Programação, metas e ocorrências</a> são consultadas pela data planejada.</p>
-<p><strong>@Visible.Count(x => analyzed.Contains(x.Id)) análises salvas</strong> · @Visible.Count(x => x.CompletedAt.HasValue && !analyzed.Contains(x.Id)) conjuntos completos aguardando análise. <a href="/cep-cartas">Consultar cartas e sinais</a>.</p>
+<p>Conjuntos criados na data local de São Paulo, com seu estado atual. Abra o conjunto para consultar cada salvamento no histórico. @if (!IsCapability) { <a href="/cep-operacao">Programação, metas e ocorrências</a><span> são consultadas pela data planejada.</span> } else { <span>Este painel mede preenchimento e análises; não existe meta diária de Cp/Cpk nesta sprint.</span> }</p>
+<p><strong>@Visible.Count(x => analyzed.Contains(x.Id)) análises salvas</strong> · @Visible.Count(x => x.CompletedAt.HasValue && !analyzed.Contains(x.Id)) conjuntos completos aguardando análise. <a href="@(IsCapability ? "/cp-estudos" : "/cep-cartas")">Consultar análises</a>.</p>
 <section class="grid kpis">
 <KpiCard Label="Conjuntos na data" Value="@Visible.Count.ToString()" Hint="Aplicado o filtro de processo" />
 <KpiCard Label="Em preenchimento" Value="@Visible.Count(x => !x.CompletedAt.HasValue).ToString()" Hint="Rascunhos preservados" Tone="cyan" />
 <KpiCard Label="Concluídos" Value="@Visible.Count(x => x.CompletedAt.HasValue).ToString()" Hint="Coleta completa, sem aprovação estatística" />
-<KpiCard Label="Amostras preenchidas" Value="@($"{Visible.Sum(x => x.CompleteSamples)} / {Visible.Count * 25}")" Hint="Três leituras por amostra" />
+<KpiCard Label="Amostras preenchidas" Value="@($"{Visible.Sum(x => x.CompleteSamples)} / {Visible.Count * RequiredSamples}")" Hint="Três leituras por amostra" />
 </section>
 <section class="card"><h2>Andamento dos conjuntos</h2><div class="table-wrap"><table class="cep-daily-table"><thead><tr><th>Conjunto e processo</th><th>Progresso</th><th>Situação</th><th>Atualização local</th><th>Histórico</th></tr></thead><tbody>
 @foreach (var item in Visible)
 {
-<tr><td><strong>#@item.Id · @item.Title</strong><br />@item.ProcessPath<br />@item.CharacteristicName · revisão @item.CharacteristicRevision</td><td><progress max="25" value="@item.CompleteSamples" aria-label="Progresso do conjunto @item.Id"></progress><br />@item.CompleteSamples / 25 amostras · @item.Readings / 75 leituras (@item.ProgressPercent%)</td><td><span class="status-chip">@(item.CompletedAt.HasValue ? "Concluído" : "Rascunho")</span></td><td>@LocalTime.Format(item.UpdatedAt)</td><td><a class="btn ghost" href="@($"/cep-coleta?id={item.Id}")">Abrir e consultar</a></td></tr>
+<tr><td><strong>#@item.Id · @item.Title</strong><br />@item.ProcessPath<br />@item.CharacteristicName · revisão @item.CharacteristicRevision</td><td><progress max="@RequiredSamples" value="@item.CompleteSamples" aria-label="Progresso do conjunto @item.Id"></progress><br />@item.CompleteSamples / @RequiredSamples amostras · @item.Readings / @(RequiredSamples * 3) leituras (@item.ProgressPercent%)</td><td><span class="status-chip">@(item.CompletedAt.HasValue ? "Concluído" : "Rascunho")</span></td><td>@LocalTime.Format(item.UpdatedAt)</td><td><a class="btn ghost" href="@($"{CollectionPath}?id={item.Id}")">Abrir e consultar</a></td></tr>
 }
 @if (Visible.Count == 0) { <tr><td colspan="5">Nenhum conjunto para esta data e filtro.</td></tr> }
 </tbody></table></div></section>
 
 @code {
+    [Inject] private ICapabilityService Capability { get; set; } = default!;
+    private bool IsCapability => new Uri(Navigation.Uri).AbsolutePath == "/cp-dia";
+    private string Label => IsCapability ? "Cp/Cpk" : "CEP";
+    private int RequiredSamples => IsCapability ? 33 : 25;
+    private string CollectionPath => IsCapability ? "/cp-coleta" : "/cep-coleta";
     private DateTime day = LocalTime.ToLocal(DateTimeOffset.UtcNow).Date;
     private string filter = "";
     private string? error;
@@ -40,7 +47,7 @@
     {
         if (busy) return;
         busy = true; error = null;
-        try { var user = (await Auth.GetAuthenticationStateAsync()).User; datasets = (await Service.DailyAsync(DateOnly.FromDateTime(day), user)).Datasets; analyzed = (await Analyses.ListAsync(null,user)).Select(x=>x.DatasetId).ToHashSet(); }
+        try { var user = (await Auth.GetAuthenticationStateAsync()).User; datasets = (await Service.DailyAsync(DateOnly.FromDateTime(day), user, IsCapability ? "CAPABILITY" : "CEP")).Datasets; analyzed = IsCapability ? (await Capability.ListAsync(user)).Select(x=>x.DatasetId).ToHashSet() : (await Analyses.ListAsync(null,user)).Select(x=>x.DatasetId).ToHashSet(); }
         catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException) { error = ex.Message; }
         finally { busy = false; }
     }

@@ -14,10 +14,10 @@
  Value="@subgroupsToday.ToString("N0", ptBr)"
  Hint="Subgrupos não excluídos no dia local" Tone="cyan" />
 <KpiCard Label="Cartas CEP" Value="@analysesCount.ToString()" Hint="Consultar análises X̄-R salvas" Tone="neutral" />
-<KpiCard Label="Capabilidade" Value="—" Hint="Disponível na F4" Tone="neutral" />
+<KpiCard Label="Estudos Cp/Cpk" Value="@capabilityCount.ToString()" Hint="Estudos salvos sobre 33 médias" Tone="neutral" />
 </section>
 <Card Title="Assistente do turno" Subtitle="O que pede atenção agora" Class="assist-card">
 <ChildContent>
-<p>Consulte a programação, os atrasos e as investigações do processo.</p><a class="btn ghost" href="/cep-operacao">Abrir CEP operacional</a><a class="btn ghost" href="/cep-cartas">Abrir cartas CEP</a>
+<p>Consulte a programação, os atrasos e as investigações do processo.</p><a class="btn ghost" href="/cep-operacao">Abrir CEP operacional</a><a class="btn ghost" href="/cep-cartas">Abrir cartas CEP</a><a class="btn ghost" href="/cp-estudos">Abrir estudos Cp/Cpk</a>
 </ChildContent>
 </Card>

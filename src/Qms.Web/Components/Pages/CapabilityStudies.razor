@@ -1,0 +1,65 @@
+@page "/cp-estudos"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "perm:view")]
+@using System.Text.Json
+@using Qms.Application.Collection
+@using Qms.Domain.Collection
+@using Qms.Domain.Security
+@using Qms.Statistics
+@inject ICapabilityService Service
+@inject ICepDatasetService Datasets
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
+
+<PageTitle>Estudos Cp/Cpk · QMS</PageTitle>
+<PageHeader Title="Estudos Cp/Cpk sobre 33 médias" Breadcrumb="Estudos / Capabilidade" />
+<div class="collection-toolbar"><a class="btn" href="/cp-coleta">Nova coleta 33 × 3</a><a class="btn ghost" href="/cp-dia">Progresso e histórico</a><a class="btn ghost" href="/modelos/Simulado_CP_CPK_33x3.xlsx" download>Baixar Excel simulado</a></div>
+<p>Cada observação é a média de três leituras. A variação local usa as 32 amplitudes móveis entre médias consecutivas: σ = MR̄ / 1,128. Preserve a ordem cronológica da coleta. Os índices descrevem as médias dos trios; não certificam as 99 medições individuais.</p>
+@if(error is not null){<div class="alert alert-bad" role="alert">@error</div>}
+<section class="card"><h2>Selecionar conjunto concluído</h2><div class="collection-fields"><label class="field">Data de criação<input class="form-control" type="date" @bind="day" /></label><button class="btn ghost" disabled="@busy" @onclick="FindAsync">Buscar conjuntos</button><label class="field">Conjunto<select class="form-control" @bind="selected"><option value="0">Selecione...</option>@foreach(var item in candidates){<option value="@item.Id">#@item.Id · @item.Title · @item.CharacteristicName</option>}</select></label></div>
+@if(canRun){<button class="btn" disabled="@(busy || selected == 0)" @onclick="RunAsync">Calcular e salvar estudo</button>}else{<p>Seu perfil permite consultar. Engenharia, Qualidade ou Administração pode executar estudos.</p>}
+<p>Exige 33 amostras completas e os dois limites de especificação. Cálculo idêntico reutiliza o registro. Uma nova coleta ou versão das definições gera outro registro.</p></section>
+@if(record is not null && saved is not null && snapshot is not null)
+{
+    var r = saved.Result;
+    <section class="card"><h2>Estudo #@record.Id · @snapshot.Title</h2><p>@snapshot.ProcessPath / @snapshot.CharacteristicName · revisão @snapshot.CharacteristicRevision · @snapshot.Unit</p><p>@LocalTime.Format(record.CreatedAt) · responsável @record.CreatedBy · definições v@record.SettingsVersion · conjunto #@record.DatasetId v@record.DatasetVersion</p>
+    <div class="grid kpis"><KpiCard Label="Cp das médias" Value="@N(r.Cp)" Hint="@($"Faixa: {Class(saved.CpClass)} · bom a partir de {N(saved.CpTarget)}")" /><KpiCard Label="Cpk das médias" Value="@N(r.Cpk)" Hint="@($"Faixa: {Class(saved.CpkClass)} · bom a partir de {N(saved.CpkTarget)}")" /><KpiCard Label="Média das 33 médias" Value="@N(r.Mean)" Hint="99 leituras preservadas" /><KpiCard Label="Sigma local das médias" Value="@N(r.SigmaWithinMeans)" Hint="32 amplitudes móveis / 1,128" /></div>
+    <p><strong>Avaliação numérica preliminar.</strong> As faixas dos índices não equivalem a aprovação do processo. Normalidade, independência e estabilidade exigem avaliação técnica; normalidade e Pp/Ppk entram na Sprint 5.</p>
+    @if(r.StabilitySignals.Count>0){<div class="alert alert-bad">Há sinais na série de médias. Investigue antes de interpretar a capabilidade.</div><ul>@foreach(var signal in r.StabilitySignals){<li>@signal</li>}</ul>}else{<p>Sem sinais nas regras fixas avaliadas: três sigmas, amplitude móvel e sete pontos em sequência. Isso não comprova estabilidade.</p>}
+    <p>Fora da especificação: @r.MeansOutsideSpec / 33 médias e @r.IndividualOutsideSpec / 99 leituras. LSL @N(r.Lsl) · USL @N(r.Usl).</p>
+    <details><summary>Método e valores para conferência</summary><p>@r.Method · MR̄ @N(r.AverageMovingRange) · Cpu @N(r.Cpu) · Cpl @N(r.Cpl)</p><p>Cp = (USL − LSL) / (6σ). Cpk = mínimo entre Cpu e Cpl. Variação nula impede o cálculo; valores negativos de Cpk são preservados.</p><p>A ordem das posições é a ordem temporal das amostras. Este estudo não usa o desvio padrão global das médias nem o R̄ das leituras originais. As definições de metas são as registradas na data deste estudo.</p></details>
+    <div class="table-wrap"><table><thead><tr><th>Amostra</th><th>Leitura 1</th><th>Leitura 2</th><th>Leitura 3</th><th>Média</th><th>Amplitude móvel das médias</th></tr></thead><tbody>@foreach(var point in r.Points){var raw=snapshot.Samples.Single(x=>x.Position==point.Position);<tr><td>@point.Position</td><td>@N(raw.Value1!.Value)</td><td>@N(raw.Value2!.Value)</td><td>@N(raw.Value3!.Value)</td><td>@N(point.Mean)</td><td>@(point.Position==1?"—":N(Math.Abs(point.Mean-r.Points[point.Position-2].Mean)))</td></tr>}</tbody></table></div>
+    <details><summary>Registro original e rastreabilidade</summary><h3>Entradas e definições preservadas</h3><pre class="cep-json">@Pretty(record.InputJson)</pre><h3>Resultado original</h3><pre class="cep-json">@Pretty(record.ResultJson)</pre></details></section>
+}
+<section class="card"><h2>Histórico de estudos</h2><label class="field">Filtrar título, característica ou ID<input class="form-control" @bind="filter" @bind:event="oninput" /></label><div class="table-wrap"><table><thead><tr><th>Estudo</th><th>Data local</th><th>Conjunto</th><th>Responsável</th><th>Consulta</th></tr></thead><tbody>@foreach(var item in history.Where(Matches)){<tr><td>#@item.Id · @StudyTitle(item)</td><td>@LocalTime.Format(item.CreatedAt)</td><td>#@item.DatasetId v@item.DatasetVersion</td><td>@item.CreatedBy</td><td><button class="btn ghost" @onclick="()=>Show(item)">Consultar registro</button><a class="btn ghost" href="@($"/cp-coleta?id={item.DatasetId}")">Coleta e histórico</a></td></tr>}@if(history.Count==0){<tr><td colspan="5">Nenhum estudo salvo.</td></tr>}</tbody></table></div></section>
+
+@code {
+    [SupplyParameterFromQuery] public int? DatasetId {get;set;}
+    private System.Security.Claims.ClaimsPrincipal user=new();
+    private DateTime day=LocalTime.ToLocal(DateTimeOffset.UtcNow).Date;
+    private int selected;
+    private bool busy,canRun;
+    private string? error;
+    private string filter="";
+    private IReadOnlyList<CepDataset> candidates=[];
+    private IReadOnlyList<CapabilityStudy> history=[];
+    private CapabilityStudy? record;
+    private CapabilityStudyResult? saved;
+    private CepDataset? snapshot;
+    protected override Task OnParametersSetAsync()=>Execute(async()=>{
+        user=(await Auth.GetAuthenticationStateAsync()).User;
+        canRun=Roles.All.Any(r=>user.IsInRole(r)&&Permissions.Allows(r,Permissions.StudiesRun));
+        if(DatasetId.HasValue){var d=await Datasets.GetAsync(DatasetId.Value,user);if(d.StudyKind!="CAPABILITY")throw new ArgumentException("Selecione uma coleta Cp/Cpk.");day=LocalTime.ToLocal(d.CreatedAt).Date;selected=d.Id;}
+        await FindCore();history=await Service.ListAsync(user);
+        var previous=history.FirstOrDefault(x=>x.DatasetId==selected);if(previous is not null)Show(previous);
+    });
+    private Task FindAsync()=>Execute(FindCore);
+    private async Task FindCore(){candidates=(await Datasets.DailyAsync(DateOnly.FromDateTime(day),user,"CAPABILITY")).Datasets.Where(x=>x.CompletedAt.HasValue).ToArray();if(!candidates.Any(x=>x.Id==selected))selected=0;}
+    private Task RunAsync()=>Execute(async()=>{var item=await Service.RunAsync(selected,user);history=await Service.ListAsync(user);Show(item);});
+    private async Task Execute(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is ArgumentException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException){error=ex is Microsoft.EntityFrameworkCore.DbUpdateException?"Outro estudo pode ter sido salvo simultaneamente. Recarregue o histórico.":ex.Message;}finally{busy=false;}}
+    private void Show(CapabilityStudy item){record=item;saved=JsonSerializer.Deserialize<CapabilityStudyResult>(item.ResultJson);snapshot=JsonSerializer.Deserialize<CepDataset>(JsonDocument.Parse(item.InputJson).RootElement.GetProperty("Dataset"));selected=item.DatasetId;}
+    private bool Matches(CapabilityStudy item)=>string.IsNullOrWhiteSpace(filter)||$"{item.Id} {item.DatasetId} {item.InputJson}".Contains(filter,StringComparison.OrdinalIgnoreCase);
+    private static string StudyTitle(CapabilityStudy item){using var doc=JsonDocument.Parse(item.InputJson);return doc.RootElement.GetProperty("Dataset").GetProperty("Title").GetString()??"";}
+    private static string N(double value)=>value.ToString("0.######",System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    private static string Class(string value)=>value switch{"Good"=>"Bom","Attention"=>"Atenção",_=>"Baixo"};
+    private static string Pretty(string json)=>JsonSerializer.Serialize(JsonDocument.Parse(json).RootElement,new JsonSerializerOptions{WriteIndented=true});
+}
